@@ -10,10 +10,17 @@ const pool = mysql.createPool({
     database: process.env.DATABASE,
 }).promise()
 
-async function getBooks() {
+export async function getBooks() {
     const [rows] = await pool.query('SELECT * FROM books')
     return rows
 }
 
-const books = await getBooks()
-console.log(books)
+export async function getBook(id) {
+    const [rows] = await pool.query('SELECT * FROM books WHERE id = ?', [id])
+    return rows[0]
+}
+
+export async function createBook(title, author, contents) {
+    const [result] = await pool.query('INSERT INTO books (title, author, contents) VALUES (?, ?, ?)', [title, author, contents])
+    return result.insertId
+}
