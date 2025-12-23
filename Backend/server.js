@@ -4,6 +4,7 @@
  *================================================================================================*/
 
 import express from 'express'
+import cors from 'cors'
 import { getBooks, getBook, createBook } from './database/database.js'
 import dotenv from 'dotenv'
 
@@ -12,6 +13,7 @@ dotenv.config()
 const app = express()
 
 app.use(express.json()) 
+app.use(cors())
 
 app.get("/books", async (req, res) => {
     const books = await getBooks()

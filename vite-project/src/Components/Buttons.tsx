@@ -88,13 +88,42 @@ export function BookList({setBook}: BookListProps) {
     }
     
     // Saves the book
-    const handleSaveButton = () => {
-        setBook(prev =>({
-            ...prev,
+    const handleSaveButton = async () => {
+        const newBook = {
             title: titleText,
-            content: contentsText,
-            author: authorText
-        }))
+            contents: contentsText,
+            author: authorText,
+        }
+        try{
+            // send data to backend
+            const response = await fetch('http://localhost:8080/books', {
+                method: 'POST',                             //Options: GET, POST, DELETE, PUT
+                headers: {
+                    'Content-type': 'application/JSON'
+                },
+                body: JSON.stringify(newBook),
+            });
+
+            if (!response.ok){
+                throw new Error('Network was not okay')
+            }
+
+            const resultID = await response.json();
+
+            setBook(prev => ([
+                ...prev,
+                {
+                    id: resultID,
+                    title: titleText,
+                    contents: contentsText,
+                    author: authorText,
+                    created: true
+                }
+            ]));
+        }catch(error){
+            console.error("Error saving book", error)
+            alert('Failed to save book, sorry cat')
+        }
     }
 
     return(
