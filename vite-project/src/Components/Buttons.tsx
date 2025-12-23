@@ -40,7 +40,7 @@ export function BookList({setBook}: BookListProps) {
 
     // How we get Contents
     const handleContents = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setTitleText(event.target.value);
+        setContentsText(event.target.value);
     }
 
     const handleContentsSave = () =>{
