@@ -1,6 +1,5 @@
 import "./Buttons.css"
-import { type Dispatch, type SetStateAction } from 'react';
-import { type ChangeEvent } from 'react';
+import { type Dispatch, type SetStateAction, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useState } from 'react'
 
 export interface books{
@@ -16,26 +15,28 @@ interface BookListProps{
 }
 export function BookList({setBook}: BookListProps) {
     const [bookContents, setBookContents] = useState <books>({id: 0, title: '', contents: '', author: '', created: false})
-    const [isVisible, setIsVisible] = useState <boolean>(false);
+    const [text, setText] = useState <string>('');
+    const [isVisible, setIsVisible] = useState <boolean>(true);
 
-    // Changes title from text area
-    // THIS IS A VARIABLE
+    // 
     const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        
-        const newTitle = event.target.value
+        setText(event.target.value)
+    }
 
-        setBookContents(prev => ({
+    const handleSave = () => {
+        setBookContents(prev =>({
             ...prev,
-            title: newTitle
+            title: text
         }))
     }
 
-    const handleBook = () =>{
-        setBook(prevBooks => [
-            ... prevBooks,
-            bookContents
-        ])
+    const handleKeyDown = (e: KeyboardEvent) =>{
+        if (e.key === 'Enter' && !e.shiftKey){
+            handleSave()
+        }
+    }
 
+    const handleBook = () =>{
         setBookContents({
             id: Date.now(),
             title: '',
@@ -47,19 +48,23 @@ export function BookList({setBook}: BookListProps) {
     }
 
     return(
-        <div className = "textarea-container">
-            <button
-                onClick = {handleBook}
-                className = "brownBook" 
-            >
-            <textarea
-                hidden = {isVisible}
-                placeholder = "Input title here"
-                value = {bookContents.title}
-                onChange={handleTitle}
-            />
-            </button>
-
+        <div>
+            <div className = "textarea-container">
+                <button
+                    onClick = {handleBook}
+                    className = "brownBook" 
+                >
+                </button>
+            </div>
+            <div>
+                <textarea
+                    hidden = {isVisible}
+                    placeholder = "Input title here"
+                    value = {text}
+                    onChange = {handleTitle}
+                    onKeyDown = {handleKeyDown}
+                />
+            </div>
         </div>
     );
 }
