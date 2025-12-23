@@ -7,7 +7,7 @@ function App() {
   return (
     <>
       <h1> Bookshelf </h1>
-      <div className='book set area'>
+      <div className='book-set-area'>
         <BookList book = {book} setBook = {setBook}></BookList>
       </div>
     </>
