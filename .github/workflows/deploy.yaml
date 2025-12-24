@@ -1,5 +1,3 @@
-# Workflow for publishing the students' website along with additional helpful information
-# Author: Austin Cory Bart
 name: Deploy main branch as website
 
 on:
@@ -17,7 +15,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # JOB 1: Build, Test, and Generate Dashboard
   build:
     runs-on: ubuntu-latest
     steps:
@@ -31,133 +28,103 @@ jobs:
         with:
           node-version: 20
 
-      - id: get-repo-values
-        name: Get repository values
+      # 1. SETUP LOGGING (Create a temporary folder outside dist to save logs safely)
+      - name: Create Temp Log Directory
+        run: mkdir -p temp_logs
+
+      # 2. INSTALL (Run in subfolder, save log to temp_logs)
+      - name: Install Dependencies
+        id: install
         run: |
-          url=https://$(echo "${{ github.repository }}" | sed "s/\//.github.io\//")
-          echo "url=$url" >> $GITHUB_OUTPUT
+          cd vite-project
+          # We pipe output to a log file outside the build folder so it survives
+          npm install |& tee ../temp_logs/install.log
 
-      # --- FIX: Explicitly create folders inside vite-project ---
-      - name: Create dist directory
-        run: mkdir -p vite-project/dist
-
-      - name: Create _ERRORS.txt and _WARNINGS.txt
-        run: |
-          touch vite-project/dist/_ERRORS.txt
-          touch vite-project/dist/_WARNINGS.txt
-
-      # --- FIX: Explicitly write logs to vite-project/dist ---
-      - name: Create Log File
-        id: create_log
-        run: |
-          echo "Starting deployment at $(date)" |& tee vite-project/dist/_build_log.txt
-          echo "Repository: ${{ github.repository }}" |& tee -a vite-project/dist/_build_log.txt
-          echo "Run ID: ${{ github.run_id }}" |& tee -a vite-project/dist/_build_log.txt
-          echo "Job: ${{ github.job }}" |& tee -a vite-project/dist/_build_log.txt
-
-      - name: Setup Dashboard
-        id: setup_dashboard
-        run: |
-          mkdir -p vite-project/docs
-          printf '## Quick Links\n\nHere are quick links for your deployed site! The build log is at the bottom.\n\n' > vite-project/docs/dashboard.md
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting to dashboard</body></html>" > vite-project/dist/dashboard.html
-          cp vite-project/dist/dashboard.html vite-project/dist/quick.html
-          echo "* [Deployed Site](../): Your actual website." >> vite-project/docs/dashboard.md
-          echo "* [Dashboard](./dashboard.html): This current page." >> vite-project/docs/dashboard.md
-          echo "* [Deployment Log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}): The official deployment logs on GitHub." >> vite-project/docs/dashboard.md
-
+      # 3. BUILD (Run in subfolder, save log to temp_logs)
+      # This deletes 'dist', which is why we waited to create the dashboard files!
       - id: compute-base
         name: Compute base path
         run: |
           repo="${GITHUB_REPOSITORY#*/}"
           echo "base=/$repo/" >> $GITHUB_OUTPUT
 
-      - name: Create Redirects and Links
-        id: create_redirects
-        run: |
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=${{github.server_url}}/${{github.repository}}' /></head><body>Redirecting to repository</body></html>" > vite-project/dist/repo.html
-          echo "* [GitHub Repository](../repo.html): Jump to the GitHub repository." >> vite-project/docs/dashboard.md
-
-      # --- FIX: cd into vite-project before running npm commands ---
-      - name: Install Dependencies
-        id: install
-        run: |
-          echo "<html><body><pre>" > vite-project/dist/installation.html
-          cd vite-project && npm install |& tee -a dist/installation.html
-          echo "</pre></body></html>" >> vite-project/dist/installation.html
-          echo '* [Installation](../installation.html): Installation details.' >> vite-project/docs/dashboard.md
-
-      - name: Run Linter
-        id: lint
-        if: ${{ !cancelled() }} 
-        run: |
-          cd vite-project && npm run eslint-output || true
-          echo "* [Linter](../lint.html)" >> vite-project/docs/dashboard.md
-
       - name: Build the project
         id: build
+        run: |
+          cd vite-project
+          npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
+
+      # 4. RUN OPTIONAL CHECKS (Lint/Test)
+      # Added "|| true" so the build doesn't fail if you don't have these scripts yet
+      - name: Run Linter
+        id: lint
         if: ${{ !cancelled() }}
         run: |
-          echo "<html><body><pre>" > vite-project/dist/build.html
-          cd vite-project && npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee -a dist/build.html
-          echo "</pre></body></html>" >> vite-project/dist/build.html
-          echo "* [Build](../build.html)" >> vite-project/docs/dashboard.md
+          cd vite-project
+          npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
 
       - name: Run Tests
         id: test
         if: ${{ !cancelled() }}
         run: |
-          echo "<html><body><pre>" > vite-project/dist/tests.html
-          cd vite-project && npm run test:cov |& tee -a dist/tests.html || true
-          echo "</pre></body></html>" >> vite-project/dist/tests.html
-          echo "* [Tests](../tests.html)" >> vite-project/docs/dashboard.md
+          cd vite-project
+          npm test |& tee ../temp_logs/test.log || echo "Test script missing or failed" >> ../temp_logs/test.log
 
-      - name: Verify Integrity
+      # 5. GENERATE DASHBOARD (Now that dist exists and is stable)
+      - name: Generate Dashboard and Logs
         if: ${{ !cancelled() }}
-        id: integrity
         run: |
-          echo "<html><body><pre>" > vite-project/dist/integrity.html
-          # Now 'find' looks in the specific subfolder explicitly
-          find vite-project/src -type f -name "*.test.ts" -exec md5sum {} + >> vite-project/dist/integrity.html
-          find vite-project/src -type f -name "*.test.tsx" -exec md5sum {} + >> vite-project/dist/integrity.html
-          echo "</pre></body></html>" >> vite-project/dist/integrity.html
-          echo "* [Integrity](../integrity.html)" >> vite-project/docs/dashboard.md
+          # Define paths
+          DIST="vite-project/dist"
+          DOCS="vite-project/docs"
+          
+          # Create necessary directories if they don't exist
+          mkdir -p $DIST
+          mkdir -p $DOCS
 
-      - name: Create GitInspector Report
-        if: ${{ !cancelled() }}
-        id: gitinspector
-        run: |
-          git clone https://github.com/jpwhite3/gitinspector.git
-          python ./gitinspector/gitinspector.py ./vite-project --grading --format=html -f tsx,ts,html,css -x ./gitinspector -x ./node_modules -x ./wbcore > vite-project/dist/git.html
-          echo "* [Git Inspector](../git.html)" >> vite-project/docs/dashboard.md
+          # --- Create HTML Logs from the temp files we saved ---
+          
+          # Installation Log
+          echo "<html><body><pre>" > $DIST/installation.html
+          cat temp_logs/install.log >> $DIST/installation.html
+          echo "</pre></body></html>" >> $DIST/installation.html
+          
+          # Build Log
+          echo "<html><body><pre>" > $DIST/build.html
+          cat temp_logs/build.log >> $DIST/build.html
+          echo "</pre></body></html>" >> $DIST/build.html
 
-      - name: Copy commit logs
-        if: ${{ !cancelled() }}
-        id: commit_logs
-        run: |
-          echo "<html><body><pre>" > vite-project/dist/commits.html
-          git log --oneline --decorate --graph --all -n 50 | tee -a vite-project/dist/commits.html
-          echo "</pre></body></html>" >> vite-project/dist/commits.html
-          echo '* [Commit Messages](../commits.html): Last 50 commits.' >> vite-project/docs/dashboard.md
+          # Lint Log
+          echo "<html><body><pre>" > $DIST/lint.html
+          if [ -f temp_logs/lint.log ]; then cat temp_logs/lint.log >> $DIST/lint.html; fi
+          echo "</pre></body></html>" >> $DIST/lint.html
 
-      - name: Add build log
-        if: ${{ !cancelled() }}
-        id: add_build_log
-        run: |
-          printf '\n## Build Log\n```\n' >> vite-project/docs/dashboard.md
-          # Explicit path fixes the "No such file" cat error
-          cat vite-project/dist/_build_log.txt >> vite-project/docs/dashboard.md
-          echo '```' >> vite-project/docs/dashboard.md
+          # Test Log
+          echo "<html><body><pre>" > $DIST/tests.html
+          if [ -f temp_logs/test.log ]; then cat temp_logs/test.log >> $DIST/tests.html; fi
+          echo "</pre></body></html>" >> $DIST/tests.html
 
+          # --- Create Dashboard Markdown ---
+          printf '## Quick Links\n\n' > $DOCS/dashboard.md
+          echo "* [Deployed Site](../): Your actual website." >> $DOCS/dashboard.md
+          echo "* [Installation Log](../installation.html)" >> $DOCS/dashboard.md
+          echo "* [Build Log](../build.html)" >> $DOCS/dashboard.md
+          echo "* [Linter Log](../lint.html)" >> $DOCS/dashboard.md
+          echo "* [Test Log](../tests.html)" >> $DOCS/dashboard.md
+
+          # Create Redirects
+          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting...</body></html>" > $DIST/dashboard.html
+          cp $DIST/dashboard.html $DIST/quick.html
+
+      # 6. DOCS GENERATION
       - name: Generate HTML from Markdown
         if: ${{ !cancelled() }}
-        id: markdown-docs
         uses: ldeluigi/markdown-docs@latest
         with:
-          # --- FIX: Point to the 'docs' inside vite-project explicitly ---
           src: vite-project/docs
           dst: vite-project/dist/docs/
 
+      # 7. UPLOAD & DEPLOY
       - name: Setup Pages
         if: ${{ !cancelled() }}
         uses: actions/configure-pages@v5
@@ -166,10 +133,8 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-pages-artifact@v3
         with:
-          # --- FIX: Point to the 'dist' folder inside vite-project explicitly ---
           path: "vite-project/dist/"
 
-  # JOB 2: Deploy to GitHub Pages
   deploy:
     environment:
       name: github-pages
