@@ -1,7 +1,5 @@
 # Workflow for publishing the students' website along with additional helpful information
 # Author: Austin Cory Bart
-# edits made by gemini 
-
 name: Deploy main branch as website
 
 on:
@@ -22,9 +20,6 @@ jobs:
   # JOB 1: Build, Test, and Generate Dashboard
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./vite-project
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +30,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # cache: "npm"  <-- Removed to prevent crash if package-lock.json is missing
 
       - id: get-repo-values
         name: Get repository values
@@ -43,32 +37,34 @@ jobs:
           url=https://$(echo "${{ github.repository }}" | sed "s/\//.github.io\//")
           echo "url=$url" >> $GITHUB_OUTPUT
 
+      # --- FIX: Explicitly create folders inside vite-project ---
       - name: Create dist directory
-        run: mkdir -p dist
+        run: mkdir -p vite-project/dist
 
       - name: Create _ERRORS.txt and _WARNINGS.txt
         run: |
-          touch ./dist/_ERRORS.txt
-          touch ./dist/_WARNINGS.txt
+          touch vite-project/dist/_ERRORS.txt
+          touch vite-project/dist/_WARNINGS.txt
 
+      # --- FIX: Explicitly write logs to vite-project/dist ---
       - name: Create Log File
         id: create_log
         run: |
-          echo "Starting deployment at $(date)" |& tee ./dist/_build_log.txt
-          echo "Repository: ${{ github.repository }}" |& tee -a ./dist/_build_log.txt
-          echo "Run ID: ${{ github.run_id }}" |& tee -a ./dist/_build_log.txt
-          echo "Job: ${{ github.job }}" |& tee -a ./dist/_build_log.txt
+          echo "Starting deployment at $(date)" |& tee vite-project/dist/_build_log.txt
+          echo "Repository: ${{ github.repository }}" |& tee -a vite-project/dist/_build_log.txt
+          echo "Run ID: ${{ github.run_id }}" |& tee -a vite-project/dist/_build_log.txt
+          echo "Job: ${{ github.job }}" |& tee -a vite-project/dist/_build_log.txt
 
       - name: Setup Dashboard
         id: setup_dashboard
         run: |
-          mkdir -p docs
-          printf '## Quick Links\n\nHere are quick links for your deployed site! The build log is at the bottom.\n\n' > docs/dashboard.md
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting to dashboard</body></html>" > ./dist/dashboard.html
-          cp ./dist/dashboard.html ./dist/quick.html
-          echo "* [Deployed Site](../): Your actual website." >> docs/dashboard.md
-          echo "* [Dashboard](./dashboard.html): This current page." >> docs/dashboard.md
-          echo "* [Deployment Log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}): The official deployment logs on GitHub." >> docs/dashboard.md
+          mkdir -p vite-project/docs
+          printf '## Quick Links\n\nHere are quick links for your deployed site! The build log is at the bottom.\n\n' > vite-project/docs/dashboard.md
+          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting to dashboard</body></html>" > vite-project/dist/dashboard.html
+          cp vite-project/dist/dashboard.html vite-project/dist/quick.html
+          echo "* [Deployed Site](../): Your actual website." >> vite-project/docs/dashboard.md
+          echo "* [Dashboard](./dashboard.html): This current page." >> vite-project/docs/dashboard.md
+          echo "* [Deployment Log](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}): The official deployment logs on GitHub." >> vite-project/docs/dashboard.md
 
       - id: compute-base
         name: Compute base path
@@ -79,98 +75,99 @@ jobs:
       - name: Create Redirects and Links
         id: create_redirects
         run: |
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=${{github.server_url}}/${{github.repository}}' /></head><body>Redirecting to repository</body></html>" > ./dist/repo.html
-          echo "* [GitHub Repository](../repo.html): Jump to the GitHub repository." >> docs/dashboard.md
+          echo "<html><head><meta http-equiv='refresh' content='0; URL=${{github.server_url}}/${{github.repository}}' /></head><body>Redirecting to repository</body></html>" > vite-project/dist/repo.html
+          echo "* [GitHub Repository](../repo.html): Jump to the GitHub repository." >> vite-project/docs/dashboard.md
 
+      # --- FIX: cd into vite-project before running npm commands ---
       - name: Install Dependencies
         id: install
-        # Changed 'npm ci' to 'npm install' to fix missing lock file error
         run: |
-          echo "<html><body><pre>" > ./dist/installation.html
-          npm install |& tee -a ./dist/installation.html
-          echo "</pre></body></html>" >> ./dist/installation.html
-          echo '* [Installation](../installation.html): Installation details.' >> docs/dashboard.md
+          echo "<html><body><pre>" > vite-project/dist/installation.html
+          cd vite-project && npm install |& tee -a dist/installation.html
+          echo "</pre></body></html>" >> vite-project/dist/installation.html
+          echo '* [Installation](../installation.html): Installation details.' >> vite-project/docs/dashboard.md
 
       - name: Run Linter
         id: lint
-        # Using !cancelled() to ensure we keep going even if lint fails
         if: ${{ !cancelled() }} 
         run: |
-          npm run eslint-output || true
-          echo "* [Linter](../lint.html)" >> docs/dashboard.md
+          cd vite-project && npm run eslint-output || true
+          echo "* [Linter](../lint.html)" >> vite-project/docs/dashboard.md
 
       - name: Build the project
         id: build
         if: ${{ !cancelled() }}
         run: |
-          echo "<html><body><pre>" > ./dist/build.html
-          npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee -a ./dist/build.html
-          echo "</pre></body></html>" >> ./dist/build.html
-          echo "* [Build](../build.html)" >> docs/dashboard.md
+          echo "<html><body><pre>" > vite-project/dist/build.html
+          cd vite-project && npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee -a dist/build.html
+          echo "</pre></body></html>" >> vite-project/dist/build.html
+          echo "* [Build](../build.html)" >> vite-project/docs/dashboard.md
 
       - name: Run Tests
         id: test
         if: ${{ !cancelled() }}
         run: |
-          echo "<html><body><pre>" > ./dist/tests.html
-          # Added || true so the pipeline doesn't stop here, matching your logic
-          npm run test:cov |& tee -a ./dist/tests.html || true
-          echo "</pre></body></html>" >> ./dist/tests.html
-          echo "* [Tests](../tests.html)" >> docs/dashboard.md
+          echo "<html><body><pre>" > vite-project/dist/tests.html
+          cd vite-project && npm run test:cov |& tee -a dist/tests.html || true
+          echo "</pre></body></html>" >> vite-project/dist/tests.html
+          echo "* [Tests](../tests.html)" >> vite-project/docs/dashboard.md
 
       - name: Verify Integrity
         if: ${{ !cancelled() }}
         id: integrity
         run: |
-          echo "<html><body><pre>" > ./dist/integrity.html
-          find src -type f -name "*.test.ts" -exec md5sum {} + >> ./dist/integrity.html
-          find src -type f -name "*.test.tsx" -exec md5sum {} + >> ./dist/integrity.html
-          echo "</pre></body></html>" >> ./dist/integrity.html
-          echo "* [Integrity](../integrity.html)" >> docs/dashboard.md
+          echo "<html><body><pre>" > vite-project/dist/integrity.html
+          # Now 'find' looks in the specific subfolder explicitly
+          find vite-project/src -type f -name "*.test.ts" -exec md5sum {} + >> vite-project/dist/integrity.html
+          find vite-project/src -type f -name "*.test.tsx" -exec md5sum {} + >> vite-project/dist/integrity.html
+          echo "</pre></body></html>" >> vite-project/dist/integrity.html
+          echo "* [Integrity](../integrity.html)" >> vite-project/docs/dashboard.md
 
       - name: Create GitInspector Report
         if: ${{ !cancelled() }}
         id: gitinspector
         run: |
           git clone https://github.com/jpwhite3/gitinspector.git
-          python ./gitinspector/gitinspector.py ./ --grading --format=html -f tsx,ts,html,css -x ./gitinspector -x ./node_modules -x ./wbcore > ./dist/git.html
-          echo "* [Git Inspector](../git.html)" >> docs/dashboard.md
+          python ./gitinspector/gitinspector.py ./vite-project --grading --format=html -f tsx,ts,html,css -x ./gitinspector -x ./node_modules -x ./wbcore > vite-project/dist/git.html
+          echo "* [Git Inspector](../git.html)" >> vite-project/docs/dashboard.md
 
       - name: Copy commit logs
         if: ${{ !cancelled() }}
         id: commit_logs
         run: |
-          echo "<html><body><pre>" > ./dist/commits.html
-          git log --oneline --decorate --graph --all -n 50 | tee -a ./dist/commits.html
-          echo "</pre></body></html>" >> ./dist/commits.html
-          echo '* [Commit Messages](../commits.html): Last 50 commits.' >> docs/dashboard.md
+          echo "<html><body><pre>" > vite-project/dist/commits.html
+          git log --oneline --decorate --graph --all -n 50 | tee -a vite-project/dist/commits.html
+          echo "</pre></body></html>" >> vite-project/dist/commits.html
+          echo '* [Commit Messages](../commits.html): Last 50 commits.' >> vite-project/docs/dashboard.md
 
       - name: Add build log
         if: ${{ !cancelled() }}
         id: add_build_log
         run: |
-          printf '\n## Build Log\n```\n' >> ./docs/dashboard.md
-          cat ./dist/_build_log.txt >> ./docs/dashboard.md
-          echo '```' >> ./docs/dashboard.md
+          printf '\n## Build Log\n```\n' >> vite-project/docs/dashboard.md
+          # Explicit path fixes the "No such file" cat error
+          cat vite-project/dist/_build_log.txt >> vite-project/docs/dashboard.md
+          echo '```' >> vite-project/docs/dashboard.md
 
       - name: Generate HTML from Markdown
         if: ${{ !cancelled() }}
         id: markdown-docs
         uses: ldeluigi/markdown-docs@latest
         with:
-          src: docs
-          dst: dist/docs/
+          # --- FIX: Point to the 'docs' inside vite-project explicitly ---
+          src: vite-project/docs
+          dst: vite-project/dist/docs/
 
       - name: Setup Pages
         if: ${{ !cancelled() }}
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        # This step uploads the 'dist' folder to GitHub so the Deploy job can see it
         if: ${{ !cancelled() }}
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "dist/"
+          # --- FIX: Point to the 'dist' folder inside vite-project explicitly ---
+          path: "vite-project/dist/"
 
   # JOB 2: Deploy to GitHub Pages
   deploy:
@@ -178,7 +175,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build # This ensures it only runs after Build is done
+    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
