@@ -1,3 +1,129 @@
+/* Container for the map */
+.game-grid {
+  display: grid;
+  /* Define columns based on your map width (30 columns of 50px) */
+  grid-template-columns: repeat(30, 50px); 
+  grid-template-rows: repeat(11, 50px);
+  
+  margin: 0 auto;
+  position: relative; /* So the player can sit absolutely on top */
+  border: 10px solid #222;
+}
+
+/* Base Tile Style */
+.tile {
+  width: 50px;
+  height: 50px;
+  box-sizing: border-box;
+}
+
+/* 0: Floor */
+.tile-floor {
+  background-image: url('./assets/Floor.png');
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+}
+
+/* 1: Wall / Bookshelf */
+.tile-wall {
+  background-color: #5d4037; /* Or use a bookshelf image here! */
+  border: 4px solid #3e2723;
+}
+
+/* 2: Rug */
+.tile-rug {
+  background-image: url('./assets/Floor.png'); /* Floor underneath */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.tile-rug img {
+  width: 100%;
+  height: 100%;
+}
+
+/* Player Character */
+.character {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  transition: top 0.1s linear, left 0.1s linear; /* Smooth movement */
+  z-index: 10;
+  pointer-events: none;
+}
+
+.character.facing-left img {
+  transform: scaleX(-1);
+}
+.rug {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 1; /* On the floor */
+}
+
+/* 2. The Bookshelf Sprite (The object on the map) */
+.bookshelf-sprite {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-color: #5d4037;
+  border: 1px solid #3e2723;
+  z-index: 5; /* Objects stick up above the floor */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+  
+  /* Styling to make it look like top-down books */
+  background-image: repeating-linear-gradient(
+    90deg,
+    #5d4037,
+    #5d4037 4px,
+    #3e2723 5px,
+    #3e2723 8px
+  );
+}
+
+/* --- THE FULL UI OVERLAY (When 'E' is pressed) --- */
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85); /* Dim background */
+  z-index: 2000; /* Above everything */
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.ui-content {
+  background: rgba(40, 30, 20, 0.95);
+  padding: 40px;
+  border: 2px solid #5d4037;
+  border-radius: 10px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+/* Close button for the UI */
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #7f1d1d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: monospace;
+}
 #root {
   max-width: 1280px;
   padding: 2rem;
@@ -32,20 +158,4 @@ h1 {
   width: 100%;
   min-height: 220px; /* Tall enough for books */
   box-shadow: inset 0 0 20px rgba(0,0,0,0.6); /* Inner shadow for depth */
-}
-
-.character {
-  position: fixed; /* Fixed so it moves relative to the window */
-  font-size: 40px;
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none; /* Let clicks pass through the character */
-  z-index: 1000; /* Ensure it floats above the shelf */
-  transition: all 0.1s linear; /* Smooth movement */
-  
-  /* Optional: Add a glow */
-  text-shadow: 0 0 10px white;
 }

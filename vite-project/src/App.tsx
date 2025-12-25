@@ -1,99 +1,195 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Buttons'
+import { LEVEL_1 } from './levelData' // Ensure capitalization matches your file
 import './App.css'
+import wizardIcon from './assets/Wizard.png'
+
+// Rug Imports
+import rugCenter from './assets/Rug.png';
+import rugTL from './assets/TopLeftRug.png';
+import rugT from './assets/TopRug.png';
+import rugTR from './assets/TopRight.png'; 
+import rugL from './assets/LeftRug.png';
+import rugR from './assets/RightRug.png';
+import rugBL from './assets/BottomLeftRug.png';
+import rugB from './assets/BottomRug.png';
+import rugBR from './assets/BottomRightRug.png';
+
+const TILE_SIZE = 50;
+const MOVE_SPEED_MS = 100;
+
+// Map IDs to Images
+const TILE_IMAGES: Record<number, string> = {
+  20: rugCenter,
+  21: rugTL,
+  22: rugT,
+  23: rugTR,
+  24: rugL,
+  25: rugR,
+  26: rugBL,
+  27: rugB,
+  28: rugBR
+};
 
 function App() {
   const [book, setBook] = useState<books[]>([])
-  const [charPos, setCharPos] = useState({ x: 100, y: 100 });
+  const [playerPos, setPlayerPos] = useState({ col: 1, row: 1 });
+  const [facingLeft, setFacingLeft] = useState(false);
+  const [showShelf, setShowShelf] = useState(false);
 
-  const charPosRef = useRef({ x: 100, y: 100 });
+  const keysPressed = useRef<Set<string>>(new Set());
+  const lastMoveTime = useRef<number>(0);
 
   useEffect (() => {
     fetch('http://localhost:8080/books')
       .then(res => res.json())
       .then(data => {
-        setBook(data);              // Set the data from the data saved in sql
+        setBook(data);
       })
       .catch(err => console.error("Had error fetching books", err));
   }, []);
 
   useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        const step = 20;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed.current.add(e.key);
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current.delete(e.key);
+    };
 
-        const newX = charPosRef.current.x;
-        const newY = charPosRef.current.y;
-        // 1. Handle Movement
-        if (e.key === 'ArrowUp' || e.key === 'w') {
-          setCharPos(prev => ({ ...prev, y: prev.y - step }));
-        } else if (e.key === 'ArrowDown' || e.key === 's') {
-          setCharPos(prev => ({ ...prev, y: prev.y + step }));
-        } else if (e.key === 'ArrowLeft' || e.key === 'a') {
-          setCharPos(prev => ({ ...prev, x: prev.x - step }));
-        } else if (e.key === 'ArrowRight' || e.key === 'd') {
-          setCharPos(prev => ({ ...prev, x: prev.x + step }));
-        }
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
-        charPosRef.current = { x: newX, y: newY };
-        // Update State (Trigger Re-render)
-        if (e.key === 'e' || e.key === 'E') {
-                const btn = document.getElementById('create-book-btn');
-                if (btn) {
-                  const btnRect = btn.getBoundingClientRect();
-                  
-                  // Use the NEW coordinates calculated above
-                  const btnCenterX = btnRect.left + btnRect.width / 2;
-                  const btnCenterY = btnRect.top + btnRect.height / 2;
-            
-                  const dist = Math.sqrt(
-                    Math.pow(newX - btnCenterX, 2) + Math.pow(newY - btnCenterY, 2)
-                  );
-            
-                  // If within 100 pixels, click
-                  if (dist < 100) {
-                    btn.click();
-                  }
-                }
-              }
-      };
-
-  window.addEventListener('keydown', handleKeyDown);
-
-  return () => {
+    return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
+useEffect(() => {
+    if (showShelf) return; // Pause game if menu is open
+
+    const gameLoop = setInterval(() => {
+      const now = Date.now();
+      // Enforce speed limit (throttling)
+      if (now - lastMoveTime.current < MOVE_SPEED_MS) return;
+
+      const keys = keysPressed.current;
+      let dx = 0;
+      let dy = 0;
+
+      // Determine movement direction
+      // We prioritize vertical if both are pressed to prevent diagonal skipping
+      if (keys.has('ArrowUp') || keys.has('w')) dy = -1;
+      else if (keys.has('ArrowDown') || keys.has('s')) dy = 1;
+      else if (keys.has('ArrowLeft') || keys.has('a')) dx = -1;
+      else if (keys.has('ArrowRight') || keys.has('d')) dx = 1;
+
+      // Interaction Check ('E' Key)
+      if (keys.has('e') || keys.has('E')) {
+        // Need to read current state inside the loop
+        setPlayerPos((curr) => {
+             const tile = LEVEL_1[curr.row][curr.col];
+             if (tile >= 20 && tile <= 28) setShowShelf(true);
+             return curr;
+        });
+        // Remove 'e' immediately so it doesn't toggle repeatedly
+        keysPressed.current.delete('e');
+        keysPressed.current.delete('E');
+      }
+
+      // If no movement input, stop logic
+      if (dx === 0 && dy === 0) return;
+
+      // PROCESS MOVEMENT
+      setPlayerPos((prev) => {
+        const newCol = prev.col + dx;
+        const newRow = prev.row + dy;
+
+        // Visuals: Face Left/Right based on input
+        if (dx < 0) setFacingLeft(true);
+        if (dx > 0) setFacingLeft(false);
+
+        // Collision Check
+        const targetTile = LEVEL_1[newRow]?.[newCol];
+        if (targetTile === 1) return prev; // Wall
+
+        lastMoveTime.current = Date.now();
+        return { col: newCol, row: newRow };
+      });
+
+    }, 20);
+
+    return () => clearInterval(gameLoop);
+  }, [showShelf]);
+
   return (
     <>
+      <h1>Library Map</h1>
+      <p style={{textAlign:'center', color:'#ccc'}}>Walk to the Rug. Press 'E'.</p>
 
-      <div 
-          className="character" 
-          style={{ left: charPos.x, top: charPos.y }}
-        >
-          🧙‍♂️
-      </div>
-      <h1> Bookshelf </h1>
-
-      <div style={{textAlign: 'center', marginBottom: '10px', color: '#ccc'}}>
-        <small>Use Arrow Keys to move. Press <strong>'e'</strong> near the brown book to write.</small>
-      </div>
-
-      <div className='shelf'>
-        <BookList book = {book} setBook = {setBook}></BookList>
-      </div>
-      <div>
-        {book.map((singleBook)=>(
-          <div key = {singleBook.id} className = "book-card">
-            <p>{singleBook.title}</p>
-            <p><strong> Author </strong>{singleBook.author}</p>
-            <div>
-              <p>{singleBook.contents}</p>
-            </div>
-            <small>ID: {singleBook.id}</small>
-          </div>
+<div 
+        className="game-grid"
+        style={{
+          width: LEVEL_1[0].length * TILE_SIZE, 
+          height: LEVEL_1.length * TILE_SIZE,
+        }}
+      >
+        {LEVEL_1.map((row, rowIndex) => (
+          row.map((tileType, colIndex) => {
+             let content: ReactNode = null;
+             let tileClass = 'tile-floor';
+             if (tileType === 1) tileClass = 'tile-wall';
+             if (tileType >= 20 && tileType <= 28) {
+                tileClass = 'tile-rug'; 
+                content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
+             }
+             return (
+               <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
+                  {content}
+               </div>
+             );
+          })
         ))}
+
+        {/* CHARACTER */}
+        <div 
+          className={`character ${facingLeft ? 'facing-left' : ''}`} // APPLY CLASS HERE
+          style={{
+            left: playerPos.col * TILE_SIZE,
+            top: playerPos.row * TILE_SIZE,
+          }}
+        >
+          <img src={wizardIcon} className="pixel-art" style={{width:'100%'}} />
+        </div>
+
       </div>
+
+      {showShelf && (
+        <div id="ui-overlay-container" className="ui-overlay">
+          <div className="ui-content">
+            <button className="close-btn" onClick={() => setShowShelf(false)}>Close (Esc)</button>
+            
+            <h2 style={{fontFamily:'PlayfairDisplay', textAlign:'center'}}>The Bookshelf</h2>
+            
+            <div className='shelf'>
+              <BookList book={book} setBook={setBook} />
+            </div>
+
+            <div style={{marginTop: '2rem'}}>
+              {book.map((singleBook)=>(
+                <div key={singleBook.id} className="book-card" style={{color: 'white', borderBottom:'1px solid #555', padding:'10px'}}>
+                  <p style={{fontSize:'1.2em'}}><strong>{singleBook.title}</strong></p>
+                  <p><em>by {singleBook.author}</em></p>
+                  <p>{singleBook.contents}</p>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </div>
+      )}
     </>
   )
 }
