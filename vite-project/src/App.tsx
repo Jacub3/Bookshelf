@@ -1,10 +1,22 @@
+/*
+Things I want:
+  - slower movement
+    - also decrease the movement from tile to tile to quarter tile to quarter tile
+  - more zoomed in perspective
+  - added detail to the library
+  - added detail to the bookshelf
+  - added detail to the outside
+*/
+
 import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Buttons'
-import { LEVEL_1 } from './levelData' // Ensure capitalization matches your file
+import { LEVEL_1 } from './levelData'
 import './App.css'
+
 import wizardIcon from './assets/Wizard.png'
 
-// Rug Imports
+import TheBookshelf from './assets/TheBookshelf.png'
+
 import rugCenter from './assets/Rug.png';
 import rugTL from './assets/TopLeftRug.png';
 import rugT from './assets/TopRug.png';
@@ -52,6 +64,10 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.key);
+
+      if (e.key === 'Escape'){
+        setShowShelf(false);
+      }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -68,38 +84,32 @@ function App() {
   }, []);
 
 useEffect(() => {
-    if (showShelf) return; // Pause game if menu is open
+    if (showShelf) return;
 
     const gameLoop = setInterval(() => {
       const now = Date.now();
-      // Enforce speed limit (throttling)
+
       if (now - lastMoveTime.current < MOVE_SPEED_MS) return;
 
       const keys = keysPressed.current;
       let dx = 0;
       let dy = 0;
 
-      // Determine movement direction
-      // We prioritize vertical if both are pressed to prevent diagonal skipping
       if (keys.has('ArrowUp') || keys.has('w')) dy = -1;
       else if (keys.has('ArrowDown') || keys.has('s')) dy = 1;
       else if (keys.has('ArrowLeft') || keys.has('a')) dx = -1;
       else if (keys.has('ArrowRight') || keys.has('d')) dx = 1;
 
-      // Interaction Check ('E' Key)
       if (keys.has('e') || keys.has('E')) {
-        // Need to read current state inside the loop
         setPlayerPos((curr) => {
              const tile = LEVEL_1[curr.row][curr.col];
              if (tile >= 20 && tile <= 28) setShowShelf(true);
              return curr;
         });
-        // Remove 'e' immediately so it doesn't toggle repeatedly
         keysPressed.current.delete('e');
         keysPressed.current.delete('E');
       }
 
-      // If no movement input, stop logic
       if (dx === 0 && dy === 0) return;
 
       // PROCESS MOVEMENT
@@ -107,11 +117,9 @@ useEffect(() => {
         const newCol = prev.col + dx;
         const newRow = prev.row + dy;
 
-        // Visuals: Face Left/Right based on input
         if (dx < 0) setFacingLeft(true);
         if (dx > 0) setFacingLeft(false);
 
-        // Collision Check
         const targetTile = LEVEL_1[newRow]?.[newCol];
         if (targetTile === 1) return prev; // Wall
 
@@ -129,7 +137,7 @@ useEffect(() => {
       <h1>Library Map</h1>
       <p style={{textAlign:'center', color:'#ccc'}}>Walk to the Rug. Press 'E'.</p>
 
-<div 
+      <div 
         className="game-grid"
         style={{
           width: LEVEL_1[0].length * TILE_SIZE, 
@@ -169,12 +177,16 @@ useEffect(() => {
       {showShelf && (
         <div id="ui-overlay-container" className="ui-overlay">
           <div className="ui-content">
+
             <button className="close-btn" onClick={() => setShowShelf(false)}>Close (Esc)</button>
             
             <h2 style={{fontFamily:'PlayfairDisplay', textAlign:'center'}}>The Bookshelf</h2>
             
-            <div className='shelf'>
-              <BookList book={book} setBook={setBook} />
+            <div className="bookshelf-container">
+              <img src={TheBookshelf} className="shelf-image" alt="Bookshelf Background" />
+              <div className="shelf-slots">
+                <BookList book={book} setBook={setBook} />
+              </div>
             </div>
 
             <div style={{marginTop: '2rem'}}>
