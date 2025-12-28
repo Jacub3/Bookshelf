@@ -13,10 +13,10 @@ import { BookList, type books } from './Components/Buttons'
 import { LEVEL_1 } from './levelData'
 import './App.css'
 
-// Character Image
 import wizardIcon from './assets/Wizard.png'
 
-// Rug Imports
+import TheBookshelf from './assets/TheBookshelf.png'
+
 import rugCenter from './assets/Rug.png';
 import rugTL from './assets/TopLeftRug.png';
 import rugT from './assets/TopRug.png';
@@ -177,12 +177,16 @@ useEffect(() => {
       {showShelf && (
         <div id="ui-overlay-container" className="ui-overlay">
           <div className="ui-content">
+
             <button className="close-btn" onClick={() => setShowShelf(false)}>Close (Esc)</button>
             
             <h2 style={{fontFamily:'PlayfairDisplay', textAlign:'center'}}>The Bookshelf</h2>
             
-            <div className='shelf'>
-              <BookList book={book} setBook={setBook} />
+            <div className="bookshelf-container">
+              <img src={TheBookshelf} className="shelf-image" alt="Bookshelf Background" />
+              <div className="shelf-slots">
+                <BookList book={book} setBook={setBook} />
+              </div>
             </div>
 
             <div style={{marginTop: '2rem'}}>

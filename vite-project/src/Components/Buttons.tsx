@@ -1,4 +1,5 @@
 import "./Buttons.css"
+import blueBook from "../assets/blueBook.png"
 import { type Dispatch, type SetStateAction, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useState } from 'react'
 
@@ -132,8 +133,9 @@ export function BookList({setBook}: BookListProps) {
                 <button
                     id="create-book-btn"
                     onClick = {handleBook}
-                    className = "brownBook" 
+                    className = "pixel-book-button" 
                 >
+                    <img src={blueBook} alt="Blue Book" className="pixel-art" />
                 </button>
             </div>
             <div>
