@@ -6,15 +6,15 @@
     cursor: pointer;
     transition: transform 0.2s ease;
     display: flex;
-    align-items: flex-end; /* Align to the bottom of the shelf */
+/* Align to the bottom of the shelf */
 }
 /* Styling for the pixel art itself */
 .pixel-art {
     width: 45px; /* Adjust this to match your desired spine width */
     height: auto;
     /* This prevents the browser from blurring your pixels */
-    image-rendering: pixelated; 
-    image-rendering: crisp-edges;
+    /* image-rendering: pixelated; 
+    image-rendering: crisp-edges; */
 
     display: block;
 }

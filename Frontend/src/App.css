@@ -86,35 +86,38 @@
     position: absolute;
     z-index: 10;
     width: 10px;   /* Makes the clickable button 25px wide */
-    /* RE-ENABLE CLICKS */
+
     pointer-events: auto; 
 
     background: none;
-    border: none;
+
     padding: 0;
     cursor: pointer;
 
     /* Your existing placement */
-    top: -20px;   
-    left: 15px; 
+    top: 90px;   
+    left: 70px; 
     bottom: auto; 
 }
+
+
 .pixel-book-button .pixel-art {
     /* SIZING */
-    height: 180px; /* Tall enough to fill the shelf gap */
+    height: 45px; /* Tall enough to fill the shelf gap */
     width: auto;  /* Maintains aspect ratio so it doesn't look squished */
     
     image-rendering: pixelated; /* Keeps it crisp */
     filter: drop-shadow(2px 0px 2px rgba(0,0,0,0.3)); /* Adds a shadow behind */
 }
-/* 5. Style the Book Image */
+
+
 .pixel-art {
     width: 30px; /* Adjust width to fit the scale of your shelf */
     height: auto;
     image-rendering: pixelated;
 }
 
-/* Optional: Hover effect */
+/*Optional: Hover effect */
 .pixel-book-button:hover {
     transform: translateY(-5px);
 }
