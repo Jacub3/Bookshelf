@@ -81,20 +81,23 @@
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Lets clicks pass through to things behind if needed */
 }
 .pixel-book-button {
     position: absolute;
     z-index: 10;
+    width: 10px;   /* Makes the clickable button 25px wide */
+    /* RE-ENABLE CLICKS */
+    pointer-events: auto; 
+
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
 
-    /* PLACEMENT */
-    top: -20px;   /* Moves it down to the first shelf level */
-    left: 15px;  /* Moves it right, inside the wooden frame */
-    bottom: auto; /* varying conflicting styles */
+    /* Your existing placement */
+    top: -20px;   
+    left: 15px; 
+    bottom: auto; 
 }
 .pixel-book-button .pixel-art {
     /* SIZING */

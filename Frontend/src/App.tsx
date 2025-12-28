@@ -4,7 +4,6 @@ Things I want:
     - also decrease the movement from tile to tile to quarter tile to quarter tile
   - more zoomed in perspective
   - added detail to the library
-  - added detail to the bookshelf
   - added detail to the outside
 */
 

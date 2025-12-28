@@ -32,7 +32,7 @@
 }
 
 .pixel-art {
-    width: 400px; /* Adjust based on your preferred size */
+    width: 20px; /* Adjust based on your preferred size */
     height: auto;
     image-rendering: pixelated; /* Keeps the pixel art sharp */
     display: block;
