@@ -3,7 +3,6 @@ Things I want:
   - slower movement
     - also decrease the movement from tile to tile to quarter tile to quarter tile
   - more zoomed in perspective
-  - added detail to the library
   - added detail to the outside
 */
 
@@ -16,6 +15,10 @@ import wizardIcon from './assets/Wizard.png'
 
 import TheBookshelf from './assets/TheBookshelf.png'
 import BookshelfTile from './assets/BookshelfTile.png'
+
+import GrassFlowers from './assets/Grass1.png'
+import GrassBFlowers from './assets/Grass2.png'
+import grass from './assets/Grass3.png'
 
 import rugCenter from './assets/Rug.png';
 import rugTL from './assets/TopLeftRug.png';
@@ -32,6 +35,9 @@ const MOVE_SPEED_MS = 100;
 
 // Map IDs to Images
 const TILE_IMAGES: Record<number, string> = {
+  2: GrassFlowers,
+  3: GrassBFlowers,
+  4: grass,
   19: BookshelfTile,
   20: rugCenter,
   21: rugTL,
@@ -150,6 +156,18 @@ useEffect(() => {
              let content: ReactNode = null;
              let tileClass = 'tile-floor';
              if (tileType === 1) tileClass = 'tile-wall';
+             if (tileType === 2){
+              tileClass = 'grassygrass'
+              content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
+             }
+             if (tileType === 3){
+              tileClass = 'grass'
+              content = <img src={TILE_IMAGES[tileType]} className = 'pixel-art'style={{width: '100%', height:'100%'}}/>
+             }
+             if (tileType === 4){
+              tileClass = 'grass'
+              content = <img src={TILE_IMAGES[tileType]} className = 'pixel-art'style={{width: '100%', height:'100%'}}/>
+             }
              if (tileType >= 20 && tileType <= 28) {
                 tileClass = 'tile-rug'; 
                 content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
