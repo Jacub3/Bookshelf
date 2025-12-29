@@ -4,7 +4,6 @@ Things I want:
     - also decrease the movement from tile to tile to quarter tile to quarter tile
   - more zoomed in perspective
   - added detail to the library
-  - added detail to the bookshelf
   - added detail to the outside
 */
 
@@ -16,6 +15,7 @@ import './App.css'
 import wizardIcon from './assets/Wizard.png'
 
 import TheBookshelf from './assets/TheBookshelf.png'
+import BookshelfTile from './assets/BookshelfTile.png'
 
 import rugCenter from './assets/Rug.png';
 import rugTL from './assets/TopLeftRug.png';
@@ -32,6 +32,7 @@ const MOVE_SPEED_MS = 100;
 
 // Map IDs to Images
 const TILE_IMAGES: Record<number, string> = {
+  19: BookshelfTile,
   20: rugCenter,
   21: rugTL,
   22: rugT,
@@ -121,7 +122,7 @@ useEffect(() => {
         if (dx > 0) setFacingLeft(false);
 
         const targetTile = LEVEL_1[newRow]?.[newCol];
-        if (targetTile === 1) return prev; // Wall
+        if (targetTile === 1|| targetTile === 19) return prev; // Wall
 
         lastMoveTime.current = Date.now();
         return { col: newCol, row: newRow };
@@ -152,6 +153,10 @@ useEffect(() => {
              if (tileType >= 20 && tileType <= 28) {
                 tileClass = 'tile-rug'; 
                 content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
+             }
+             if (tileType === 19){
+                tileClass = 'Bookshelf'
+                content = <img src={TILE_IMAGES[tileType]} />
              }
              return (
                <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
