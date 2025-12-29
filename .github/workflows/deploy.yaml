@@ -36,7 +36,7 @@ jobs:
       - name: Install Dependencies
         id: install
         run: |
-          cd vite-project
+          cd Frontend
           # We pipe output to a log file outside the build folder so it survives
           npm install |& tee ../temp_logs/install.log
 
@@ -51,7 +51,7 @@ jobs:
       - name: Build the project
         id: build
         run: |
-          cd vite-project
+          cd Frontend
           npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
 
       # 4. RUN OPTIONAL CHECKS (Lint/Test)
@@ -60,14 +60,14 @@ jobs:
         id: lint
         if: ${{ !cancelled() }}
         run: |
-          cd vite-project
+          cd Frontend
           npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
 
       - name: Run Tests
         id: test
         if: ${{ !cancelled() }}
         run: |
-          cd vite-project
+          cd Frontend
           npm test |& tee ../temp_logs/test.log || echo "Test script missing or failed" >> ../temp_logs/test.log
 
       # 5. GENERATE DASHBOARD (Now that dist exists and is stable)
@@ -75,8 +75,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           # Define paths
-          DIST="vite-project/dist"
-          DOCS="vite-project/docs"
+          DIST="Frontend/dist"
+          DOCS="Frontend/docs"
           
           # Create necessary directories if they don't exist
           mkdir -p $DIST
@@ -121,8 +121,8 @@ jobs:
         if: ${{ !cancelled() }}
         uses: ldeluigi/markdown-docs@latest
         with:
-          src: vite-project/docs
-          dst: vite-project/dist/docs/
+          src: Frontend/docs
+          dst: Frontend/dist/docs/
 
       # 7. UPLOAD & DEPLOY
       - name: Setup Pages
@@ -133,7 +133,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "vite-project/dist/"
+          path: "Frontend/dist/"
 
   deploy:
     environment:
