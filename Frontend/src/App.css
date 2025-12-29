@@ -2,8 +2,8 @@
 .game-grid {
   display: grid;
   /* Define columns based on your map width (30 columns of 50px) */
-  grid-template-columns: repeat(30, 50px); 
-  grid-template-rows: repeat(11, 50px);
+  grid-template-columns: repeat(18, 50px); 
+  grid-template-rows: repeat(17, 50px);
   
   margin: 0 auto;
   position: relative; /* So the player can sit absolutely on top */
