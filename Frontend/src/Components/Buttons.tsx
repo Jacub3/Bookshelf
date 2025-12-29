@@ -1,6 +1,6 @@
 import "./Buttons.css"
 import blueBook from "../assets/blueBook.png"
-import { type Dispatch, type SetStateAction, type ChangeEvent, type KeyboardEvent } from 'react';
+import { type Dispatch, type SetStateAction, type ChangeEvent } from 'react';
 import { useState } from 'react'
 
 export interface books{
@@ -14,81 +14,38 @@ interface BookListProps{
     book: books[],
     setBook: Dispatch<SetStateAction<books[]>>
 }
+
 export function BookList({setBook}: BookListProps) {
-    const [, setBookContents] = useState <books>({id: 0, title: '', contents: '', author: '', created: true})
+    // Consolidated state for the "Writing Mode"
+    const [isWriting, setIsWriting] = useState<boolean>(false);
+    
     const [titleText, setTitleText] = useState <string>('');
     const [contentsText, setContentsText] = useState <string>('');
     const [authorText, setAuthorText] = useState <string>('');
-    const [isVisible, setIsVisible] = useState <boolean>(true);
-    const [isVisible1, setIsVisible1] = useState <boolean>(true);
-    const [isVisible2, setIsVisible2] = useState <boolean>(true);
 
-    // How we get title
+    // Handlers
     const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
         setTitleText(event.target.value);
     }
-
-    const handleTitleSave = () =>{
-        setTitleText(titleText)
-    }
-
-    const handleKeyDown = (e: KeyboardEvent) =>{
-        if (e.key === 'Enter' && !e.shiftKey){
-            setIsVisible(!isVisible)
-            handleTitleSave();
-        }
-    }
-
-    // How we get Contents
     const handleContents = (event: ChangeEvent<HTMLTextAreaElement>) => {
         setContentsText(event.target.value);
     }
-
-    const handleContentsSave = () =>{
-        setContentsText(contentsText)
-    }
-
-    const handleKeyDownContents = (e: KeyboardEvent) =>{
-        if (e.key === 'Enter' && !e.shiftKey){
-            setIsVisible1(!isVisible1)
-            handleContentsSave();
-        }
-    }
-
-    // How we get Author
     const handleAuthor = (event: ChangeEvent<HTMLTextAreaElement>) => {
         setAuthorText(event.target.value);
-
     }
 
-    const handleAuthorSave = () =>{
-        setAuthorText(authorText)
+    // Opens the writing interface
+    const startWriting = () => {
+        // Reset fields if you want a blank book every time, 
+        // or remove these lines to keep the draft.
+        setTitleText('');
+        setAuthorText('');
+        setContentsText('');
+        
+        setIsWriting(true);
     }
 
-    const handleKeyDownAuthor = (e: KeyboardEvent) =>{
-        if (e.key === 'Enter' && !e.shiftKey){
-            setIsVisible2(!isVisible2)
-            handleAuthorSave();
-        }
-    }
-
-    // sets default && buttons visible
-    const handleBook = () =>{
-        setBookContents({
-            id: Date.now(),
-            title: '',
-            contents: '',
-            author: '',
-            created: true
-        });
-
-        // makes all textboxes visible
-        setIsVisible(!isVisible)
-        setIsVisible1(!isVisible1)
-        setIsVisible2(!isVisible2)
-    }
-    
-    // Saves the book
+    // Saves the book and closes interface
     const handleSaveButton = async () => {
         const newBook = {
             title: titleText,
@@ -98,7 +55,7 @@ export function BookList({setBook}: BookListProps) {
         try{
             // send data to backend
             const response = await fetch('http://localhost:8080/books', {
-                method: 'POST',                             //Options: GET, POST, DELETE, PUT
+                method: 'POST',
                 headers: {
                     'Content-type': 'application/JSON'
                 },
@@ -121,7 +78,11 @@ export function BookList({setBook}: BookListProps) {
                     created: true
                 }
             ]));
-        }catch(error){
+            
+            // Close the writing interface on success
+            setIsWriting(false);
+
+        } catch(error){
             console.error("Error saving book", error)
             alert('Failed to save book, sorry cat')
         }
@@ -129,46 +90,63 @@ export function BookList({setBook}: BookListProps) {
 
     return(
         <div>
+            {/* The Clickable Button on the Shelf */}
             <div className = "book-container">
                 <button
                     id="create-book-btn"
-                    onClick = {handleBook}
-                    className = "pixel-book-button" 
+                    onClick = {startWriting}
+                    className = "pixel-book-button"
+                    title="Write a new book"
                 >
                     <img src={blueBook} alt="Blue Book" className="pixel-art" />
                 </button>
             </div>
-            <div>
-                <textarea
-                    hidden = {isVisible}
-                    placeholder = "Input title here"
-                    value = {titleText}
-                    onChange = {handleTitle}
-                    onKeyDown = {handleKeyDown}
-                />
-                <textarea
-                    hidden = {isVisible1}
-                    placeholder = "Input contents here"
-                    value = {contentsText}
-                    onChange = {handleContents}
-                    onKeyDown = {handleKeyDownContents}
-                />
-                <textarea
-                    hidden = {isVisible2}
-                    placeholder = "Input author here"
-                    value = {authorText}
-                    onChange = {handleAuthor}
-                    onKeyDown = {handleKeyDownAuthor}
-                />
-            </div>
-            <div>
-                <button
-                    hidden = {!isVisible||!isVisible1||!isVisible2}
-                    onClick={handleSaveButton}
-                    className="saveButton"
-                >
-                </button>
-            </div>
+
+            {/* The Open Book Overlay (Only visible when writing) */}
+            {isWriting && (
+                <div className="writing-overlay">
+                    <div className="open-book">
+                        
+                        {/* LEFT PAGE: Title and Author */}
+                        <div className="book-page page-left">
+                            <textarea
+                                className="handwritten-input title-input"
+                                placeholder="Title..."
+                                value={titleText}
+                                onChange={handleTitle}
+                                maxLength={30}
+                            />
+                            <textarea
+                                className="handwritten-input author-input"
+                                placeholder="Author..."
+                                value={authorText}
+                                onChange={handleAuthor}
+                                maxLength={30}
+                            />
+                            
+                            <div className="book-actions">
+                                <button className="ink-btn" onClick={() => setIsWriting(false)}>
+                                    Discard
+                                </button>
+                                <button className="ink-btn" onClick={handleSaveButton}>
+                                    Sign & Save
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* RIGHT PAGE: Contents */}
+                        <div className="book-page page-right">
+                            <textarea
+                                className="handwritten-input contents-input"
+                                placeholder="Once upon a time..."
+                                value={contentsText}
+                                onChange={handleContents}
+                            />
+                        </div>
+                        
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
