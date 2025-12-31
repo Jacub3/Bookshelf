@@ -11,15 +11,12 @@ import { BookList, type books } from './Components/Buttons'
 import { LEVEL_1 } from './levelData'
 import './App.css'
 
-import wizardIcon from './assets/Wizard.png'
-
+// -- ASSETS --
 import TheBookshelf from './assets/TheBookshelf.png'
 import BookshelfTile from './assets/BookshelfTile.png'
-
 import GrassFlowers from './assets/Grass1.png'
 import GrassBFlowers from './assets/Grass2.png'
 import grass from './assets/Grass3.png'
-
 import rugCenter from './assets/Rug.png';
 import rugTL from './assets/TopLeftRug.png';
 import rugT from './assets/TopRug.png';
@@ -31,113 +28,158 @@ import rugB from './assets/BottomRug.png';
 import rugBR from './assets/BottomRightRug.png';
 
 const TILE_SIZE = 50;
-const MOVE_SPEED_MS = 100;
+const MOVEMENT_SPEED = 2.5; 
+const ANIMATION_SPEED = 10; 
 
-// Map IDs to Images
+// CONFIG: How many animation frames does your sheet actually have per row?
+// Set this to 1 to STOP the "oscillation" / flashing between different views.
+const MAX_FRAMES = 1; 
+
 const TILE_IMAGES: Record<number, string> = {
-  2: GrassFlowers,
-  3: GrassBFlowers,
-  4: grass,
-  19: BookshelfTile,
-  20: rugCenter,
-  21: rugTL,
-  22: rugT,
-  23: rugTR,
-  24: rugL,
-  25: rugR,
-  26: rugBL,
-  27: rugB,
-  28: rugBR
+  2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
+  20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 
+  24: rugL, 25: rugR, 26: rugBL, 27: rugB, 28: rugBR
+};
+
+// UPDATED ROW MAPPING based on your observations
+const SPRITE_MAP = {
+  down: {row: 2, col: 1},  // You confirmed Row 0 is "Full Face"
+  right: {row: 1, col: 2},  // You confirmed Row 1 is "Left"
+  left: {row: 1, col: 2}, // We REUSE Row 1 for Right, but we will FLIP it in CSS
+  up: {row: 3, col: 2},    // Let's try Row 2 for Up (Back view). If this is wrong, try 3.
 };
 
 function App() {
   const [book, setBook] = useState<books[]>([])
-  const [playerPos, setPlayerPos] = useState({ col: 1, row: 1 });
-  const [facingLeft, setFacingLeft] = useState(false);
+  
+  const [pos, setPos] = useState({ x: 50, y: 50 });
+  const [direction, setDirection] = useState<'down' | 'up' | 'left' | 'right'>('down');
+  // We can ignore isWalking for now since we are locking frames
+  const [, setIsWalking] = useState(false); 
+  const [animationFrame, setAnimationFrame] = useState(0);
+  
   const [showShelf, setShowShelf] = useState(false);
 
   const keysPressed = useRef<Set<string>>(new Set());
-  const lastMoveTime = useRef<number>(0);
+  const tickCount = useRef(0); 
+  const animationReq = useRef<number>(0);
+  
+  // Keep track of current state for the loop
+  const posRef = useRef(pos);
+  const directionRef = useRef(direction);
+
+  useEffect(() => { posRef.current = pos; }, [pos]);
+  useEffect(() => { directionRef.current = direction; }, [direction]);
 
   useEffect (() => {
     fetch('http://localhost:8080/books')
-      .then(res => res.json())
-      .then(data => {
-        setBook(data);
-      })
-      .catch(err => console.error("Had error fetching books", err));
+      .then(res => res.json()).then(setBook)
+      .catch(console.error);
   }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (keysPressed.current.has(e.key)) return; 
       keysPressed.current.add(e.key);
-
-      if (e.key === 'Escape'){
-        setShowShelf(false);
-      }
+      if (e.key === 'Escape') setShowShelf(false);
     };
-    
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key);
     };
-
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
-useEffect(() => {
+  const isWalkable = (x: number, y: number) => {
+    const col = Math.floor((x + 25) / TILE_SIZE); 
+    const row = Math.floor((y + 40) / TILE_SIZE); 
+    if (row < 0 || row >= LEVEL_1.length || col < 0 || col >= LEVEL_1[0].length) return false;
+    const tile = LEVEL_1[row][col];
+    return tile !== 1 && tile !== 19;
+  };
+
+  const checkInteraction = (currentPos: {x: number, y: number}) => {
+      const col = Math.floor((currentPos.x + 25) / TILE_SIZE);
+      const row = Math.floor((currentPos.y + 25) / TILE_SIZE);
+      const tile = LEVEL_1[row]?.[col];
+      if (tile >= 20 && tile <= 28) {
+          setShowShelf(true);
+      }
+  };
+
+  // -- GAME LOOP --
+  useEffect(() => {
     if (showShelf) return;
 
-    const gameLoop = setInterval(() => {
-      const now = Date.now();
-
-      if (now - lastMoveTime.current < MOVE_SPEED_MS) return;
-
+    const loop = () => {
+      const currentPos = posRef.current;
+      const currentDir = directionRef.current;
       const keys = keysPressed.current;
+
       let dx = 0;
       let dy = 0;
 
-      if (keys.has('ArrowUp') || keys.has('w')) dy = -1;
-      else if (keys.has('ArrowDown') || keys.has('s')) dy = 1;
-      else if (keys.has('ArrowLeft') || keys.has('a')) dx = -1;
-      else if (keys.has('ArrowRight') || keys.has('d')) dx = 1;
+      // Correct "Cancelling" Movement Logic
+      if (keys.has('ArrowUp') || keys.has('w')) dy -= 1;
+      if (keys.has('ArrowDown') || keys.has('s')) dy += 1;
+      if (keys.has('ArrowLeft') || keys.has('a')) dx -= 1;
+      if (keys.has('ArrowRight') || keys.has('d')) dx += 1;
+
+      // Determine Direction
+      let newDirection = currentDir;
+      if (dy > 0) newDirection = 'down';
+      else if (dy < 0) newDirection = 'up';
+      
+      // Horizontal usually overrides vertical for sprite facing
+      if (dx > 0) newDirection = 'right';
+      else if (dx < 0) newDirection = 'left';
 
       if (keys.has('e') || keys.has('E')) {
-        setPlayerPos((curr) => {
-             const tile = LEVEL_1[curr.row][curr.col];
-             if (tile >= 20 && tile <= 28) setShowShelf(true);
-             return curr;
-        });
+        checkInteraction(currentPos);
         keysPressed.current.delete('e');
         keysPressed.current.delete('E');
       }
 
-      if (dx === 0 && dy === 0) return;
+      if (dx !== 0 || dy !== 0) {
+        const length = Math.sqrt(dx*dx + dy*dy);
+        const normDx = (dx / length) * MOVEMENT_SPEED;
+        const normDy = (dy / length) * MOVEMENT_SPEED;
 
-      // PROCESS MOVEMENT
-      setPlayerPos((prev) => {
-        const newCol = prev.col + dx;
-        const newRow = prev.row + dy;
+        let nextX = currentPos.x + normDx;
+        let nextY = currentPos.y + normDy;
 
-        if (dx < 0) setFacingLeft(true);
-        if (dx > 0) setFacingLeft(false);
+        if (!isWalkable(nextX, currentPos.y)) nextX = currentPos.x;
+        if (!isWalkable(currentPos.x, nextY)) nextY = currentPos.y;
+        if (!isWalkable(nextX, nextY)) { nextX = currentPos.x; nextY = currentPos.y; }
 
-        const targetTile = LEVEL_1[newRow]?.[newCol];
-        if (targetTile === 1|| targetTile === 19) return prev; // Wall
+        setPos({ x: nextX, y: nextY });
+        setDirection(newDirection);
+        setIsWalking(true);
 
-        lastMoveTime.current = Date.now();
-        return { col: newCol, row: newRow };
-      });
+        tickCount.current++;
+        if (tickCount.current > ANIMATION_SPEED) {
+          // Cycle between 0 and MAX_FRAMES (which is 1 for now)
+          setAnimationFrame(prev => (prev + 1) % MAX_FRAMES); 
+          tickCount.current = 0;
+        }
+      } else {
+        setIsWalking(false);
+        setAnimationFrame(0);
+      }
 
-    }, 20);
+      animationReq.current = requestAnimationFrame(loop);
+    };
 
-    return () => clearInterval(gameLoop);
-  }, [showShelf]);
+    animationReq.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationReq.current!);
+  }, [showShelf]); 
+
+  const SPRITE_OFFSET_X = -35; 
+  const SPRITE_OFFSET_Y = -26; 
 
   return (
     <>
@@ -155,27 +197,21 @@ useEffect(() => {
           row.map((tileType, colIndex) => {
              let content: ReactNode = null;
              let tileClass = 'tile-floor';
+             
              if (tileType === 1) tileClass = 'tile-wall';
-             if (tileType === 2){
-              tileClass = 'grassygrass'
-              content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
-             }
-             if (tileType === 3){
-              tileClass = 'grass'
-              content = <img src={TILE_IMAGES[tileType]} className = 'pixel-art'style={{width: '100%', height:'100%'}}/>
-             }
-             if (tileType === 4){
-              tileClass = 'grass'
-              content = <img src={TILE_IMAGES[tileType]} className = 'pixel-art'style={{width: '100%', height:'100%'}}/>
+             if ([2,3,4].includes(tileType)){
+               tileClass = 'grass';
+               content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
              }
              if (tileType >= 20 && tileType <= 28) {
                 tileClass = 'tile-rug'; 
                 content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
              }
              if (tileType === 19){
-                tileClass = 'Bookshelf'
-                content = <img src={TILE_IMAGES[tileType]} />
+                tileClass = 'Bookshelf';
+                content = <img src={TILE_IMAGES[tileType]} />;
              }
+
              return (
                <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
                   {content}
@@ -184,15 +220,25 @@ useEffect(() => {
           })
         ))}
 
-        {/* CHARACTER */}
         <div 
-          className={`character ${facingLeft ? 'facing-left' : ''}`} // APPLY CLASS HERE
+          className="character"
           style={{
-            left: playerPos.col * TILE_SIZE,
-            top: playerPos.row * TILE_SIZE,
+            transform: `translate(${pos.x}px, ${pos.y}px)`, 
           }}
         >
-          <img src={wizardIcon} className="pixel-art" style={{width:'100%'}} />
+           <div 
+             className="character_sprite"
+             style={{
+               // FIX: Since sprite faces Left naturally, we flip when moving RIGHT
+               transform: direction === 'left' ? 'scaleX(-1)' : 'none',
+               
+               backgroundPosition: `
+                ${-((SPRITE_MAP[direction].col + animationFrame) * 50) + SPRITE_OFFSET_X}px 
+                 ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
+               `
+             }}
+           />
+           <div className="character_shadow"></div>
         </div>
 
       </div>
@@ -200,28 +246,14 @@ useEffect(() => {
       {showShelf && (
         <div id="ui-overlay-container" className="ui-overlay">
           <div className="ui-content">
-
             <button className="close-btn" onClick={() => setShowShelf(false)}>Close (Esc)</button>
-            
             <h2 style={{fontFamily:'PlayfairDisplay', textAlign:'center'}}>The Bookshelf</h2>
-            
             <div className="bookshelf-container">
-              <img src={TheBookshelf} className="shelf-image" alt="Bookshelf Background" />
+              <img src={TheBookshelf} className="shelf-image" alt="Bookshelf" />
               <div className="shelf-slots">
                 <BookList book={book} setBook={setBook} />
               </div>
             </div>
-
-            <div style={{marginTop: '2rem'}}>
-              {book.map((singleBook)=>(
-                <div key={singleBook.id} className="book-card" style={{color: 'white', borderBottom:'1px solid #555', padding:'10px'}}>
-                  <p style={{fontSize:'1.2em'}}><strong>{singleBook.title}</strong></p>
-                  <p><em>by {singleBook.author}</em></p>
-                  <p>{singleBook.contents}</p>
-                </div>
-              ))}
-            </div>
-
           </div>
         </div>
       )}
