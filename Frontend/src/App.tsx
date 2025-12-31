@@ -1,9 +1,6 @@
 /*
 Things I want:
-  - slower movement
-    - also decrease the movement from tile to tile to quarter tile to quarter tile
   - more zoomed in perspective
-  - added detail to the outside
 */
 
 import { useEffect, useState, useRef, type ReactNode } from 'react'
@@ -31,9 +28,7 @@ const TILE_SIZE = 50;
 const MOVEMENT_SPEED = 2.5; 
 const ANIMATION_SPEED = 10; 
 
-// CONFIG: How many animation frames does your sheet actually have per row?
-// Set this to 1 to STOP the "oscillation" / flashing between different views.
-const MAX_FRAMES = 1; 
+const MAX_FRAMES = 10; 
 
 const TILE_IMAGES: Record<number, string> = {
   2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
@@ -41,12 +36,11 @@ const TILE_IMAGES: Record<number, string> = {
   24: rugL, 25: rugR, 26: rugBL, 27: rugB, 28: rugBR
 };
 
-// UPDATED ROW MAPPING based on your observations
 const SPRITE_MAP = {
-  down: {row: 2, col: 1},  // You confirmed Row 0 is "Full Face"
-  right: {row: 1, col: 2},  // You confirmed Row 1 is "Left"
-  left: {row: 1, col: 2}, // We REUSE Row 1 for Right, but we will FLIP it in CSS
-  up: {row: 3, col: 2},    // Let's try Row 2 for Up (Back view). If this is wrong, try 3.
+  down: {row: 2, col: 1},
+  right: {row: 1, col: 2},
+  left: {row: 1, col: 2},
+  up: {row: 3, col: 2},
 };
 
 function App() {
@@ -54,7 +48,6 @@ function App() {
   
   const [pos, setPos] = useState({ x: 50, y: 50 });
   const [direction, setDirection] = useState<'down' | 'up' | 'left' | 'right'>('down');
-  // We can ignore isWalking for now since we are locking frames
   const [, setIsWalking] = useState(false); 
   const [animationFrame, setAnimationFrame] = useState(0);
   
@@ -63,8 +56,7 @@ function App() {
   const keysPressed = useRef<Set<string>>(new Set());
   const tickCount = useRef(0); 
   const animationReq = useRef<number>(0);
-  
-  // Keep track of current state for the loop
+
   const posRef = useRef(pos);
   const directionRef = useRef(direction);
 
@@ -123,18 +115,15 @@ function App() {
       let dx = 0;
       let dy = 0;
 
-      // Correct "Cancelling" Movement Logic
       if (keys.has('ArrowUp') || keys.has('w')) dy -= 1;
       if (keys.has('ArrowDown') || keys.has('s')) dy += 1;
       if (keys.has('ArrowLeft') || keys.has('a')) dx -= 1;
       if (keys.has('ArrowRight') || keys.has('d')) dx += 1;
 
-      // Determine Direction
       let newDirection = currentDir;
       if (dy > 0) newDirection = 'down';
       else if (dy < 0) newDirection = 'up';
-      
-      // Horizontal usually overrides vertical for sprite facing
+
       if (dx > 0) newDirection = 'right';
       else if (dx < 0) newDirection = 'left';
 
@@ -162,7 +151,6 @@ function App() {
 
         tickCount.current++;
         if (tickCount.current > ANIMATION_SPEED) {
-          // Cycle between 0 and MAX_FRAMES (which is 1 for now)
           setAnimationFrame(prev => (prev + 1) % MAX_FRAMES); 
           tickCount.current = 0;
         }
@@ -229,7 +217,6 @@ function App() {
            <div 
              className="character_sprite"
              style={{
-               // FIX: Since sprite faces Left naturally, we flip when moving RIGHT
                transform: direction === 'left' ? 'scaleX(-1)' : 'none',
                
                backgroundPosition: `
