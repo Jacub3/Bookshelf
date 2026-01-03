@@ -1,0 +1,230 @@
+/* Container for the map */
+.camera-viewport {
+  margin: 0 auto;
+
+  overflow: hidden;
+
+  position: relative;
+
+
+}
+
+.game-grid {
+  display: grid;
+
+  grid-template-columns: repeat(18, 50px); 
+  grid-template-rows: repeat(17, 50px);
+  
+  margin: 0 auto;
+  border: none;
+  will-change: transform;
+  position: relative;
+
+}
+
+/* Base Tile Style */
+.tile {
+  width: 50px;
+  height: 50px;
+  box-sizing: border-box;
+}
+
+/* 0: Floor */
+.tile-floor {
+  background-image: url('./assets/Floor.png');
+  background-size: 100% 100%;
+  image-rendering: pixelated;
+}
+
+/* 1: Wall / Bookshelf */
+.tile-wall {
+  background-color: #5d4037; /* Or use a bookshelf image here! */
+  border: 4px solid #3e2723;
+}
+
+/* 2: Rug */
+.tile-rug {
+  background-image: url('./assets/Floor.png'); /* Floor underneath */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.tile-rug img {
+  width: 100%;
+  height: 100%;
+}
+
+/* Player Character */
+.character {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+}
+.character_sprite {
+  width: 50px;
+  height: 50px;
+  background-image: url('./assets/Wizard.png');
+  background-repeat: no-repeat;
+  background-size: 220px auto;
+  /* background-position will be handled in React inline styles */
+  image-rendering: pixelated; 
+}
+.character_shadow {
+  position: absolute;
+  bottom: 2px;
+  left: 5px;
+  width: 40px;
+  height: 10px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 50%;
+  z-index: -1;
+}
+.character.facing-left img {
+  transform: scaleX(-1);
+}
+.rug {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  z-index: 1; /* On the floor */
+}
+.bookshelf-container {
+  position: relative;
+  width: 300px; /* CRITICAL: Must match your .shelf-image width */
+  margin: 0 auto; /* This keeps the whole shelf centered on screen */
+}
+
+.shelf-image {
+  display: block;
+  width: 300px;
+  height: auto;
+  image-rendering: pixelated; /* Keeps the pixel art sharp */
+}
+
+/* The area where books actually sit */
+.shelf-slots {
+    position: absolute; /* Floats on top of the image */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+.pixel-book-button {
+    position: absolute;
+    z-index: 10;
+    width: 10px;   /* Makes the clickable button 25px wide */
+
+    pointer-events: auto; 
+
+    background: none;
+
+    padding: 0;
+    cursor: pointer;
+
+    /* Your existing placement */
+    top: 90px;   
+    left: 70px; 
+    bottom: auto; 
+}
+
+
+.pixel-book-button .pixel-art {
+    /* SIZING */
+    height: 45px; /* Tall enough to fill the shelf gap */
+    width: auto;  /* Maintains aspect ratio so it doesn't look squished */
+    
+    image-rendering: pixelated; /* Keeps it crisp */
+    filter: drop-shadow(2px 0px 2px rgba(0,0,0,0.3)); /* Adds a shadow behind */
+}
+
+
+.pixel-art {
+    width: 30px; /* Adjust width to fit the scale of your shelf */
+    height: auto;
+    image-rendering: pixelated;
+}
+
+/*Optional: Hover effect */
+.pixel-book-button:hover {
+    transform: translateY(-5px);
+}
+
+.ui-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85); /* Dim background */
+  z-index: 2000; /* Above everything */
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+}
+
+.ui-content {
+  background: rgba(40, 30, 20, 0.95);
+  padding: 40px;
+  border: 2px solid #5d4037;
+  border-radius: 10px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+}
+
+/* Close button for the UI */
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #7f1d1d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-family: monospace;
+}
+#root {
+  max-width: 1280px;
+  padding: 2rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+/*Bookshelf in app.tsx*/
+h1 {
+  color: rgba(255, 255, 255, 0.849);
+  padding: 10px 15px 15px 5px;
+  background: 10px 10px repeat-x fixed;
+  font-family: "PlayfairDisplay";
+
+}
+.shelf {
+  display: flex;
+  gap: 4px; /* Small gap between books */
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end; /* CRITICAL: Makes books sit on the bottom */
+  
+  /* Wood Shelf Styling */
+  background-color: #3e2723; /* Dark shadow inside shelf */
+  border: 15px solid #5d4037; /* Wood frame */
+  border-bottom: 20px solid #4e342e; /* Thicker bottom plank */
+  border-radius: 4px;
+  padding: 20px 20px 0 20px; /* Padding top/sides, 0 bottom */
+  width: 100%;
+  min-height: 220px; /* Tall enough for books */
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.6); /* Inner shadow for depth */
+}

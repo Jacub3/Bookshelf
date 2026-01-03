@@ -27,7 +27,14 @@ body {
   min-width: 320px;
   min-height: 100vh;
 
-  background-color: rgba(117, 82, 16, 0.788);
+  /* Dark floor color */
+  background-color: #261a10; 
+  
+  /* Creates a 50px x 50px grid pattern to look like tiles */
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 h1 {
@@ -53,7 +60,11 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
-
+.pixel-art {
+  image-rendering: pixelated;       /* Standard */
+  image-rendering: -moz-crisp-edges; /* Firefox */
+  image-rendering: crisp-edges;
+}
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

@@ -1,0 +1,152 @@
+import "./Buttons.css"
+import blueBook from "../assets/blueBook.png"
+import { type Dispatch, type SetStateAction, type ChangeEvent } from 'react';
+import { useState } from 'react'
+
+export interface books{
+    id: number
+    title: string
+    contents: string
+    author: string
+    created: boolean
+} 
+interface BookListProps{
+    book: books[],
+    setBook: Dispatch<SetStateAction<books[]>>
+}
+
+export function BookList({setBook}: BookListProps) {
+    // Consolidated state for the "Writing Mode"
+    const [isWriting, setIsWriting] = useState<boolean>(false);
+    
+    const [titleText, setTitleText] = useState <string>('');
+    const [contentsText, setContentsText] = useState <string>('');
+    const [authorText, setAuthorText] = useState <string>('');
+
+    // Handlers
+    const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
+        setTitleText(event.target.value);
+    }
+    const handleContents = (event: ChangeEvent<HTMLTextAreaElement>) => {
+        setContentsText(event.target.value);
+    }
+    const handleAuthor = (event: ChangeEvent<HTMLTextAreaElement>) => {
+        setAuthorText(event.target.value);
+    }
+
+    // Opens the writing interface
+    const startWriting = () => {
+        // Reset fields if you want a blank book every time, 
+        // or remove these lines to keep the draft.
+        setTitleText('');
+        setAuthorText('');
+        setContentsText('');
+        
+        setIsWriting(true);
+    }
+
+    // Saves the book and closes interface
+    const handleSaveButton = async () => {
+        const newBook = {
+            title: titleText,
+            contents: contentsText,
+            author: authorText,
+        }
+        try{
+            // send data to backend
+            const response = await fetch('http://localhost:8080/books', {
+                method: 'POST',
+                headers: {
+                    'Content-type': 'application/JSON'
+                },
+                body: JSON.stringify(newBook),
+            });
+
+            if (!response.ok){
+                throw new Error('Network was not okay')
+            }
+
+            const resultID = await response.json();
+
+            setBook(prev => ([
+                ...prev,
+                {
+                    id: resultID,
+                    title: titleText,
+                    contents: contentsText,
+                    author: authorText,
+                    created: true
+                }
+            ]));
+            
+            // Close the writing interface on success
+            setIsWriting(false);
+
+        } catch(error){
+            console.error("Error saving book", error)
+            alert('Failed to save book, sorry cat')
+        }
+    }
+
+    return(
+        <div>
+            {/* The Clickable Button on the Shelf */}
+            <div className = "book-container">
+                <button
+                    id="create-book-btn"
+                    onClick = {startWriting}
+                    className = "pixel-book-button"
+                    title="Write a new book"
+                >
+                    <img src={blueBook} alt="Blue Book" className="pixel-art" />
+                </button>
+            </div>
+
+            {/* The Open Book Overlay (Only visible when writing) */}
+            {isWriting && (
+                <div className="writing-overlay">
+                    <div className="open-book">
+                        
+                        {/* LEFT PAGE: Title and Author */}
+                        <div className="book-page page-left">
+                            <textarea
+                                className="handwritten-input title-input"
+                                placeholder="Title..."
+                                value={titleText}
+                                onChange={handleTitle}
+                                maxLength={30}
+                            />
+                            <textarea
+                                className="handwritten-input author-input"
+                                placeholder="Author..."
+                                value={authorText}
+                                onChange={handleAuthor}
+                                maxLength={30}
+                            />
+                            
+                            <div className="book-actions">
+                                <button className="ink-btn" onClick={() => setIsWriting(false)}>
+                                    Discard
+                                </button>
+                                <button className="ink-btn" onClick={handleSaveButton}>
+                                    Sign & Save
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* RIGHT PAGE: Contents */}
+                        <div className="book-page page-right">
+                            <textarea
+                                className="handwritten-input contents-input"
+                                placeholder="Once upon a time..."
+                                value={contentsText}
+                                onChange={handleContents}
+                            />
+                        </div>
+                        
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

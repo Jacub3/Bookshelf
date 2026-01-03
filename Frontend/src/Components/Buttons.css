@@ -1,0 +1,153 @@
+/* Styling for the button container */
+.pixel-book-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    display: flex;
+/* Align to the bottom of the shelf */
+}
+/* Styling for the pixel art itself */
+.pixel-art {
+    width: 45px; /* Adjust this to match your desired spine width */
+    height: auto;
+    /* This prevents the browser from blurring your pixels */
+    /* image-rendering: pixelated; 
+    image-rendering: crisp-edges; */
+
+    display: block;
+}
+
+.pixel-book-button:hover {
+    transform: translateY(-10px) scale(1.1);
+    filter: drop-shadow(0px 5px 5px rgba(0,0,0,0.5));
+}
+
+.pixel-book-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.pixel-art {
+    width: 20px; /* Adjust based on your preferred size */
+    height: auto;
+    image-rendering: pixelated; /* Keeps the pixel art sharp */
+    display: block;
+}
+.writing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7); /* Dim the background */
+    z-index: 3000; /* Sit above the shelf UI */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The Book Container */
+.open-book {
+    position: relative;
+    width: 700px;
+    height: 500px;
+    background-color: #4e342e; /* Leather cover color */
+    border-radius: 8px;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.6);
+    display: flex;
+    padding: 15px; /* Shows the leather edges */
+    gap: 0; /* Pages touch in the middle */
+}
+
+/* Individual Pages */
+.book-page {
+    flex: 1;
+    background-color: #fcf5e5; /* Parchment/Paper color */
+    padding: 30px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.15); /* Inner shadow for depth */
+}
+
+/* Left page rounded on left corners */
+.page-left {
+    border-radius: 4px 0 0 4px;
+    border-right: 1px solid #e0d0b0; /* Spine crease */
+}
+
+/* Right page rounded on right corners */
+.page-right {
+    border-radius: 0 4px 4px 0;
+    border-left: 1px solid #d0c0a0; /* Spine crease */
+}
+
+/* Common style for the "Ink" inputs */
+.handwritten-input {
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: 'Courier New', Courier, monospace; /* Typewriter/Ink font */
+    color: #2c1b18; /* Ink color */
+    width: 100%;
+    display: block;
+}
+
+/* Title Input Styling */
+.title-input {
+    font-size: 1.8rem;
+    font-weight: bold;
+    height: 60px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid rgba(0,0,0,0.1); /* Underline for title */
+    overflow: hidden;
+}
+
+/* Author Input Styling */
+.author-input {
+    font-size: 1.1rem;
+    font-style: italic;
+    height: 40px;
+    margin-bottom: auto; /* Pushes content down */
+}
+
+/* Main Body Contents Styling */
+.contents-input {
+    font-size: 1rem;
+    line-height: 1.6;
+    height: 100%; /* Fill the right page */
+}
+
+/* Placeholder styling to look lighter */
+.handwritten-input::placeholder {
+    color: rgba(44, 27, 24, 0.3);
+    font-style: italic;
+}
+
+/* Action Buttons below the inputs */
+.book-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.ink-btn {
+    padding: 8px 16px;
+    background: #3e2723;
+    color: #fcf5e5;
+    border: 1px solid #5d4037;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.ink-btn:hover {
+    background: #5d4037;
+}
