@@ -31,7 +31,7 @@ const ANIMATION_SPEED = 10;
 const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 600;
 
-const MAX_FRAMES = 10; 
+const MAX_FRAMES = 3; 
 
 const TILE_IMAGES: Record<number, string> = {
   2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
@@ -40,10 +40,10 @@ const TILE_IMAGES: Record<number, string> = {
 };
 
 const SPRITE_MAP = {
-  down: {row: 2, col: 1},
-  right: {row: 1, col: 2},
-  left: {row: 1, col: 2},
-  up: {row: 3, col: 2},
+  down: {row: 2, col: 0},
+  right: {row: 1, col: 0},
+  left: {row: 1, col: 0},
+  up: {row: 3, col: 0},
 };
 
 function App() {
