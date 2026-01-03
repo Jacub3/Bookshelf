@@ -1,13 +1,25 @@
 /* Container for the map */
+.camera-viewport {
+  margin: 0 auto;
+
+  overflow: hidden;
+
+  position: relative;
+
+
+}
+
 .game-grid {
   display: grid;
-  /* Define columns based on your map width (30 columns of 50px) */
+
   grid-template-columns: repeat(18, 50px); 
   grid-template-rows: repeat(17, 50px);
   
   margin: 0 auto;
-  position: relative; /* So the player can sit absolutely on top */
-  border: 10px solid #222;
+  border: none;
+  will-change: transform;
+  position: relative;
+
 }
 
 /* Base Tile Style */

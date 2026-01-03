@@ -28,6 +28,9 @@ const TILE_SIZE = 50;
 const MOVEMENT_SPEED = 2.5; 
 const ANIMATION_SPEED = 10; 
 
+const VIEWPORT_WIDTH = 800;
+const VIEWPORT_HEIGHT = 600;
+
 const MAX_FRAMES = 10; 
 
 const TILE_IMAGES: Record<number, string> = {
@@ -59,6 +62,18 @@ function App() {
 
   const posRef = useRef(pos);
   const directionRef = useRef(direction);
+
+  let camX = -pos.x + (VIEWPORT_WIDTH / 2) - (TILE_SIZE / 2);
+  let camY = -pos.y + (VIEWPORT_HEIGHT / 2) - (TILE_SIZE / 2);
+
+  const mapWidth = LEVEL_1[0].length * TILE_SIZE;
+  const mapHeight = LEVEL_1.length * TILE_SIZE;
+
+  if (camX > 0) camX = 0;
+  if (camX < -(mapWidth - VIEWPORT_WIDTH)) camX = -(mapWidth - VIEWPORT_WIDTH)
+
+  if (camY > 0) camY = 0;
+  if (camY < -(mapHeight - VIEWPORT_HEIGHT)) camY = -(mapHeight - VIEWPORT_HEIGHT);
 
   useEffect(() => { posRef.current = pos; }, [pos]);
   useEffect(() => { directionRef.current = direction; }, [direction]);
@@ -173,15 +188,25 @@ function App() {
     <>
       <h1>Library Map</h1>
       <p style={{textAlign:'center', color:'#ccc'}}>Walk to the Rug. Press 'E'.</p>
-
-      <div 
-        className="game-grid"
+      <div
+        className="camera-viewport"
         style={{
-          width: LEVEL_1[0].length * TILE_SIZE, 
-          height: LEVEL_1.length * TILE_SIZE,
+          width: VIEWPORT_WIDTH,
+          height: VIEWPORT_HEIGHT,
         }}
-      >
-        {LEVEL_1.map((row, rowIndex) => (
+      >  
+        <div 
+          className="game-grid"
+          style={{
+            width: mapWidth, 
+            height: mapHeight,
+            // APPLY THE CAMERA MOVE HERE
+            transform: `translate(${camX}px, ${camY}px)`,
+            // Optional: Smooth camera movement
+            transition: 'transform 0.1s linear', 
+          }}
+        >
+                  {LEVEL_1.map((row, rowIndex) => (
           row.map((tileType, colIndex) => {
              let content: ReactNode = null;
              let tileClass = 'tile-floor';
@@ -225,6 +250,10 @@ function App() {
                `
              }}
            />
+
+        </div>
+
+
            <div className="character_shadow"></div>
         </div>
 
