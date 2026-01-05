@@ -1,11 +1,7 @@
-/*
-Things I want:
-  - more zoomed in perspective
-*/
-
 import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Buttons'
 import { LEVEL_1 } from './levelData'
+import { Combat } from './Components/Goblin'
 import './App.css'
 
 // -- ASSETS --
@@ -224,6 +220,8 @@ function App() {
                 tileClass = 'Bookshelf';
                 content = <img src={TILE_IMAGES[tileType]} />;
              }
+
+             <Combat tileType={tileType}></Combat>
 
              return (
                <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
