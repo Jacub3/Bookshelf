@@ -15,14 +15,14 @@ export interface defualtWiz{
     attackOptions: string[]
 }
 
-interface wizardProps{
+// interface wizardProps{
 
 
-}
-export function buildWiz({name, level, experience, weaponType}){
+// }
+// export function buildWiz({name, level, experience, weaponType}){
 
 
 
 
 
-}
+// }

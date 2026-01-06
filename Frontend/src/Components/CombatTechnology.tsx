@@ -11,8 +11,7 @@
  *      example: Mages are proficient with spells
  *  - 
  *==============================================================================================*/
-import { useState } from 'react'
-import { charater } from './CharacterSheet'
+// import { useState } from 'react'
 
 export interface goblin{
     level: number
@@ -24,11 +23,12 @@ export interface goblin{
 
 // combat function for dealing with the baddies
 export function Combat(){
-    const [isFighting, setIsFighting] = useState<boolean>(false);
-    const [hp, setHP] = useState<number>(healthPoints)
+    // const [isFighting, setIsFighting] = useState<boolean>(false);
+    // const [hp, setHP] = useState<number>(healthPoints)
 
+    // const playerAttack = () => {
 
-
+    // }
 
     return (
         <div></div>
