@@ -12,6 +12,8 @@
  *  - 
  *==============================================================================================*/
 import { useState } from 'react'
+import { charater } from './CharacterSheet'
+
 export interface goblin{
     level: number
     weaponType: string
@@ -21,12 +23,12 @@ export interface goblin{
 }
 
 // combat function for dealing with the baddies
-export function Combat({tyleType}: tyle){
-
-    tyleType
-    
+export function Combat(){
     const [isFighting, setIsFighting] = useState<boolean>(false);
     const [hp, setHP] = useState<number>(healthPoints)
+
+
+
 
     return (
         <div></div>
