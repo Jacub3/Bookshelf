@@ -27,8 +27,6 @@ const ANIMATION_SPEED = 10;
 const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 600;
 
-const MAX_FRAMES = 3; 
-
 const TILE_IMAGES: Record<number, string> = {
   2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
   20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 
@@ -36,10 +34,10 @@ const TILE_IMAGES: Record<number, string> = {
 };
 
 const SPRITE_MAP = {
-  down: {row: 2, col: 0},
-  right: {row: 1, col: 0},
-  left: {row: 1, col: 0},
-  up: {row: 3, col: 0},
+  down: {row: 2, col: 0, frames: 2},
+  right: {row: 1, col: 0, frames: 3},
+  left: {row: 1, col: 0, frames: 3},
+  up: {row: 3, col: 2, frames: 2},
 };
 
 function App() {
@@ -161,8 +159,10 @@ function App() {
         setIsWalking(true);
 
         tickCount.current++;
+        const currentMaxFrames = SPRITE_MAP[newDirection]?.frames || 3;
+
         if (tickCount.current > ANIMATION_SPEED) {
-          setAnimationFrame(prev => (prev + 1) % MAX_FRAMES); 
+          setAnimationFrame(prev => (prev + 1) % currentMaxFrames); 
           tickCount.current = 0;
         }
       } else {
@@ -241,8 +241,8 @@ function App() {
                transform: direction === 'left' ? 'scaleX(-1)' : 'none',
                
                backgroundPosition: `
-                ${-((SPRITE_MAP[direction].col + animationFrame) * 50) + SPRITE_OFFSET_X}px 
-                 ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
+                ${-((SPRITE_MAP[direction].col + (animationFrame % SPRITE_MAP[direction].frames)) * 50) + SPRITE_OFFSET_X}px 
+                ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
                `
              }}
            />
