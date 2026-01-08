@@ -38,8 +38,8 @@
 
 /* 1: Wall / Bookshelf */
 .tile-wall {
-  background-color: #5d4037; /* Or use a bookshelf image here! */
-  border: 4px solid #3e2723;
+  width: 50px;
+  height: 50px;
 }
 
 /* 2: Rug */
