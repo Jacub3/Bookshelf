@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
 import { LEVEL_1 } from './levelData'
-import { Combat } from './Components/CombatTechnology'
+//import { Combat } from './Components/CombatTechnology'
 import './App.css'
 
 // -- ASSETS --
@@ -221,7 +221,7 @@ function App() {
                 content = <img src={TILE_IMAGES[tileType]} />;
              }
 
-             <Combat></Combat>
+             //<Combat></Combat>
 
              return (
                <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
