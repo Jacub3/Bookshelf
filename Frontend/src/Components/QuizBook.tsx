@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { type QuizData } from '../services/AIquizing';
-import './Bookshelf.css'; // Reusing your existing styles
+import './Bookshelf.css';
 
 interface QuizBookProps {
     quiz: QuizData;
@@ -13,6 +13,26 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
     const [isAnswered, setIsAnswered] = useState(false);
     const [score, setScore] = useState(0);
     const [isFinished, setIsFinished] = useState(false);
+
+    const hasSaved = useRef(false);
+
+    useEffect(() => {
+
+        if (isFinished && !hasSaved.current && score > 0) {
+            hasSaved.current = true;
+            
+            fetch(`http://localhost:8080/wizards/1/exp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: score })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("XP Updated!", data);
+            })
+            .catch(err => console.error("Failed to save XP", err));
+        }
+    }, [isFinished, score]); 
 
     const currentQ = quiz.questions[currentIndex];
 
@@ -35,7 +55,7 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
         }
     };
 
-    // --- RESULTS VIEW (Written on the pages) ---
+    // --- RESULTS VIEW ---
     if (isFinished) {
         return (
             <div className="writing-overlay">
@@ -47,6 +67,11 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
                     <div className="book-page page-right" style={{justifyContent: 'center', alignItems: 'center'}}>
                         <h3 className="handwritten-text">Score</h3>
                         <h1 style={{fontSize: '3em', color: '#3e2723'}}>{score} / {quiz.questions.length}</h1>
+                        
+                        <p className="handwritten-text" style={{marginTop: '10px'}}>
+                            +{score} Experience Gained!
+                        </p>
+
                         <button className="ink-btn" onClick={onClose}>Close Book</button>
                     </div>
                 </div>
@@ -58,7 +83,6 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
     return (
         <div className="writing-overlay">
             <div className="open-book">
-                {/* LEFT PAGE: Question & Info */}
                 <div className="book-page page-left">
                     <div className="quiz-header">
                         <span className="handwritten-label">Ch. {currentIndex + 1}</span>
@@ -68,7 +92,6 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
                         {currentQ.question}
                     </p>
 
-                    {/* Feedback Area (Shows after answering) */}
                     {isAnswered && (
                         <div className={`quiz-feedback ${selectedOption === currentQ.correctAnswer ? 'correct' : 'wrong'}`}>
                             <strong>{selectedOption === currentQ.correctAnswer ? "Correct." : "Incorrect."}</strong>
@@ -77,7 +100,6 @@ export function QuizBook({ quiz, onClose }: QuizBookProps) {
                     )}
                 </div>
 
-                {/* RIGHT PAGE: Options */}
                 <div className="book-page page-right">
                     <div className="quiz-options-list">
                         {currentQ.options.map((option, idx) => {

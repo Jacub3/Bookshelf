@@ -24,3 +24,25 @@ export async function createBook(title, author, contents) {
     const [result] = await pool.query('INSERT INTO books (title, author, contents) VALUES (?, ?, ?)', [title, author, contents])
     return result.insertId
 }
+
+export async function getWizard(id) {
+    const [rows] = await pool.query('SELECT * FROM wizards WHERE id = ?', [id])
+    return rows[0]
+}
+
+export async function addExperience(id, amount) {
+    const wizard = await getWizard(id);
+    let newXP = wizard.experience + amount;
+    let newLevel = wizard.level;
+
+    if (newXP >= 10) {
+        newLevel++;
+        newXP = newXP - 10;
+    }
+
+    const [result] = await pool.query(
+        'UPDATE wizards SET experience = ?, level = ? WHERE id = ?', 
+        [newXP, newLevel, id]
+    );
+    return { level: newLevel, experience: newXP };
+}
