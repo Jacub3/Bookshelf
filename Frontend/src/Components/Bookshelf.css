@@ -6,15 +6,12 @@
     cursor: pointer;
     transition: transform 0.2s ease;
     display: flex;
-/* Align to the bottom of the shelf */
 }
 /* Styling for the pixel art itself */
 .pixel-art {
     width: 45px; /* Adjust this to match your desired spine width */
-    height: auto;
-    /* This prevents the browser from blurring your pixels */
-    /* image-rendering: pixelated; 
-    image-rendering: crisp-edges; */
+    height: auto; 
+    image-rendering: crisp-edges;
 
     display: block;
 }
@@ -30,9 +27,42 @@
     cursor: pointer;
     padding: 0;
 }
+.quiz-option-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px;
+    margin-bottom: 8px;
+    
+    /* CHANGE: White background, Black text */
+    background-color: #ffffff;
+    color: #000000;
+    
+    border: 1px solid #d0c0a0; /* Subtle border to match the book style */
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
 
+/* Hover effect */
+.quiz-option-btn:hover {
+    background-color: #f0f0f0; /* Very light gray on hover */
+}
+
+/* Optional: Style for the selected/correct/wrong states if you want them to change colors */
+.quiz-option-btn.opt-correct {
+    background-color: #d4edda; /* Light green */
+    border-color: #c3e6cb;
+}
+
+.quiz-option-btn.opt-wrong {
+    background-color: #f8d7da; /* Light red */
+    border-color: #f5c6cb;
+}
 .pixel-art {
-    width: 20px; /* Adjust based on your preferred size */
+    width: 20px;
     height: auto;
     image-rendering: pixelated; /* Keeps the pixel art sharp */
     display: block;
@@ -55,12 +85,12 @@
     position: relative;
     width: 700px;
     height: 500px;
-    background-color: #4e342e; /* Leather cover color */
+    background-color: #4e342e;
     border-radius: 8px;
     box-shadow: 0 15px 30px rgba(0,0,0,0.6);
     display: flex;
-    padding: 15px; /* Shows the leather edges */
-    gap: 0; /* Pages touch in the middle */
+    padding: 15px;
+    gap: 0;
 }
 
 /* Individual Pages */

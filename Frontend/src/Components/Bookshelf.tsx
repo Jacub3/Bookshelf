@@ -125,7 +125,6 @@ export function BookList({setBook}: BookListProps) {
                     <img src={blueBook} alt="Blue Book" className="pixel-art" />
                 </button>
 
-                {/* ADDITION: The Quiz Button (Red Book) */}
                 <button
                     onClick={() => {startQuiz(titleText, authorText, Number(contentsText))}}
                     className="pixel-book-button"
