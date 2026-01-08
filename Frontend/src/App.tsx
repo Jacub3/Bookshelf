@@ -196,9 +196,7 @@ function App() {
           style={{
             width: mapWidth, 
             height: mapHeight,
-            // APPLY THE CAMERA MOVE HERE
             transform: `translate(${camX}px, ${camY}px)`,
-            // Optional: Smooth camera movement
             transition: 'transform 0.1s linear', 
           }}
         >

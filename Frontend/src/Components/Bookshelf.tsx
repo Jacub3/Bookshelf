@@ -59,7 +59,12 @@ export function BookList({setBook}: BookListProps) {
         setIsLoadingQuiz(true);
         const data = await generateBookQuiz("The Hobbit", "J.R.R. Tolkien");
         setIsLoadingQuiz(false);
-        if (data) setActiveQuiz(data);
+        if (data) {
+            setActiveQuiz(data);
+        } else {
+            console.error("Failed to generate quiz data.");
+            // Optional: alert("Quiz generation failed. Check console/API Key.");
+        }
     };
 
     // Saves the book and closes interface
@@ -105,9 +110,6 @@ export function BookList({setBook}: BookListProps) {
         }
     }
 
-    // ADDITION: If the quiz is active, we render that INSTEAD of the shelf, 
-    // or you could render it as an overlay below. 
-    // This return block ensures we don't break the main view structure.
     if (activeQuiz) {
         return <QuizBook quiz={activeQuiz} onClose={() => setActiveQuiz(null)} />;
     }

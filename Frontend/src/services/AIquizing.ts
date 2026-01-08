@@ -2,7 +2,6 @@ import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { z } from "zod";
 
 // --- Configuration ---
-// Note: In a real production app, call a backend endpoint instead of exposing the key here.
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || ""; 
 const genAI = new GoogleGenerativeAI(API_KEY);
 
@@ -27,7 +26,7 @@ export async function generateBookQuiz(title: string, author: string): Promise<Q
   }
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -63,8 +62,10 @@ export async function generateBookQuiz(title: string, author: string): Promise<Q
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     if (!text) throw new Error("No response text");
-    
-    const json = JSON.parse(text);
+
+    const cleanedText = text.replace(/```json|```/g, '').trim();
+
+    const json = JSON.parse(cleanedText);
     return QuizSchema.parse(json);
   } catch (error) {
     console.error("Quiz generation failed:", error);
