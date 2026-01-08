@@ -10,7 +10,7 @@ import { QuizBook } from "./QuizBook";
 export interface books{
     id: number
     title: string
-    contents: string
+    contents: number
     author: string
     created: boolean
 } 
@@ -24,7 +24,7 @@ export function BookList({setBook}: BookListProps) {
     const [isWriting, setIsWriting] = useState<boolean>(false);
     
     const [titleText, setTitleText] = useState <string>('');
-    const [contentsText, setContentsText] = useState <string>('');
+    const [contentsText, setContentsText] = useState <number | ''>('');
     const [authorText, setAuthorText] = useState <string>('');
 
     // ADDITION: State for the Quiz Mode
@@ -35,8 +35,9 @@ export function BookList({setBook}: BookListProps) {
     const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
         setTitleText(event.target.value);
     }
-    const handleContents = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setContentsText(event.target.value);
+    const handleContents = (event: ChangeEvent<HTMLInputElement>) => {
+        const val = event.target.value;
+        setContentsText(val === '' ? '': Number(val));
     }
     const handleAuthor = (event: ChangeEvent<HTMLTextAreaElement>) => {
         setAuthorText(event.target.value);
@@ -53,17 +54,14 @@ export function BookList({setBook}: BookListProps) {
         setIsWriting(true);
     }
 
-    // ADDITION: Handler to start the Quiz
-    const startQuiz = async () => {
-        // For now, we hardcode a book, or you could pass a specific book from your list
+    const startQuiz = async (title: string, author: string, chapters: number) => {
         setIsLoadingQuiz(true);
-        const data = await generateBookQuiz("The Hobbit", "J.R.R. Tolkien");
+        const data = await generateBookQuiz(title, author, chapters);
         setIsLoadingQuiz(false);
         if (data) {
             setActiveQuiz(data);
         } else {
             console.error("Failed to generate quiz data.");
-            // Optional: alert("Quiz generation failed. Check console/API Key.");
         }
     };
 
@@ -71,7 +69,7 @@ export function BookList({setBook}: BookListProps) {
     const handleSaveButton = async () => {
         const newBook = {
             title: titleText,
-            contents: contentsText,
+            contents: Number(contentsText),
             author: authorText,
         }
         try{
@@ -95,7 +93,7 @@ export function BookList({setBook}: BookListProps) {
                 {
                     id: resultID,
                     title: titleText,
-                    contents: contentsText,
+                    contents: Number(contentsText),
                     author: authorText,
                     created: true
                 }
@@ -129,7 +127,7 @@ export function BookList({setBook}: BookListProps) {
 
                 {/* ADDITION: The Quiz Button (Red Book) */}
                 <button
-                    onClick={startQuiz}
+                    onClick={() => {startQuiz(titleText, authorText, Number(contentsText))}}
                     className="pixel-book-button"
                     style={{ left: '110px', top: '90px' }} 
                     title="Take a Quiz"
@@ -188,11 +186,20 @@ export function BookList({setBook}: BookListProps) {
 
                         {/* RIGHT PAGE: Contents */}
                         <div className="book-page page-right">
-                            <textarea
+                            <input
+                                type="number"
                                 className="handwritten-input contents-input"
-                                placeholder="Once upon a time..."
+                                placeholder="Enter a number..."
                                 value={contentsText}
                                 onChange={handleContents}
+                                style={{
+                                    width: '80%',
+                                    fontSize: '1.5rem',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    outline: 'none',
+                                    fontFamily: 'inherit'
+                                }}
                             />
                         </div>
                         

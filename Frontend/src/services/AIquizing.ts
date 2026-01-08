@@ -19,11 +19,15 @@ export const QuizSchema = z.object({
 export type QuizData = z.infer<typeof QuizSchema>;
 
 // --- Generation Function ---
-export async function generateBookQuiz(title: string, author: string): Promise<QuizData | null> {
+export async function generateBookQuiz(title: string, author: string, chapters: number): Promise<QuizData | null> {
   if (!API_KEY) {
     console.error("Gemini API Key is missing");
     return null;
   }
+
+  // LOGIC: Calculate questions based on chapters
+  // We use Math.max(1, ...) to ensure we don't ask for 0 questions if the input is empty
+  const numQuestions = Math.max(1, chapters * 2);
 
   const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
@@ -55,7 +59,8 @@ export async function generateBookQuiz(title: string, author: string): Promise<Q
     },
   });
 
-  const prompt = `Generate a 5-question multiple choice quiz for the book "${title}" by ${author}. 
+  // UPDATE: Inject numQuestions into the prompt
+  const prompt = `Generate a ${numQuestions}-question multiple choice quiz for the book "${title}" by ${author}. 
   The tone should be scholarly yet accessible. Ensure the correct answer is in the options list.`;
 
   try {
