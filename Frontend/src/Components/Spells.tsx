@@ -1,15 +1,19 @@
-/*===============================================================================
- * this file is to make sure I have a place to create, destroy, and modify spells
- *=============================================================================*/
-// import {useState} from 'react'
-export interface spells{
-    name: string
-    dmgMod: number
-    dmg: number
-    effect: boolean
-}
-
-// export function createSpell(name, dmgMod, dmg, effect){
+// /*===============================================================================
+//  * this file is to make sure I have a place to create, destroy, and modify spells
+//  *=============================================================================*/
+// import { useState, type SetStateAction, type Dispatch } from 'react'
+// export interface spell{
+//     name: string
+//     dmgMod: number
+//     dmg: number
+//     effect: boolean
+// }
+// interface spellListProps{
+//     spells: spell[],
+//     setSpells: Dispatch<SetStateAction<spell[]>>
+// }
+// // function to create a new instance of a spell
+// export function createSpell({setSpells}: spellListProps){
 //     const defualtSpell = {
 //         name: "spell",
 //         dmgMod: 1,
@@ -19,16 +23,11 @@ export interface spells{
 
 //     const [spell, setSpell] = useState <spells>(defualtSpell)
 
-//     setSpell(prev => ([
-//         ...prev,
-//         {
-//             name: name,
-//             dmgMod: dmgMod,
-//             dmg: dmg,
-//             effect: effect,
-//         }
-//     ]))
 
 // }
-export function destroySpell(){}
-export function editSpell(){}
+
+// // function to take away an existing spell based on the name
+// export function destroySpell(){}
+
+// // function to make changes to existing spells
+// export function editSpell(){}

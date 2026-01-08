@@ -3,6 +3,10 @@ import blueBook from "../assets/blueBook.png"
 import { type Dispatch, type SetStateAction, type ChangeEvent } from 'react';
 import { useState } from 'react'
 
+// ADDITION: Imports for the Quiz feature
+import { generateBookQuiz, type QuizData } from "../services/AIquizing";
+import { QuizBook } from "./QuizBook";
+
 export interface books{
     id: number
     title: string
@@ -22,6 +26,10 @@ export function BookList({setBook}: BookListProps) {
     const [titleText, setTitleText] = useState <string>('');
     const [contentsText, setContentsText] = useState <string>('');
     const [authorText, setAuthorText] = useState <string>('');
+
+    // ADDITION: State for the Quiz Mode
+    const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
+    const [activeQuiz, setActiveQuiz] = useState<QuizData | null>(null);
 
     // Handlers
     const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -44,6 +52,15 @@ export function BookList({setBook}: BookListProps) {
         
         setIsWriting(true);
     }
+
+    // ADDITION: Handler to start the Quiz
+    const startQuiz = async () => {
+        // For now, we hardcode a book, or you could pass a specific book from your list
+        setIsLoadingQuiz(true);
+        const data = await generateBookQuiz("The Hobbit", "J.R.R. Tolkien");
+        setIsLoadingQuiz(false);
+        if (data) setActiveQuiz(data);
+    };
 
     // Saves the book and closes interface
     const handleSaveButton = async () => {
@@ -88,6 +105,13 @@ export function BookList({setBook}: BookListProps) {
         }
     }
 
+    // ADDITION: If the quiz is active, we render that INSTEAD of the shelf, 
+    // or you could render it as an overlay below. 
+    // This return block ensures we don't break the main view structure.
+    if (activeQuiz) {
+        return <QuizBook quiz={activeQuiz} onClose={() => setActiveQuiz(null)} />;
+    }
+
     return(
         <div>
             {/* The Clickable Button on the Shelf */}
@@ -100,7 +124,33 @@ export function BookList({setBook}: BookListProps) {
                 >
                     <img src={blueBook} alt="Blue Book" className="pixel-art" />
                 </button>
+
+                {/* ADDITION: The Quiz Button (Red Book) */}
+                <button
+                    onClick={startQuiz}
+                    className="pixel-book-button"
+                    style={{ left: '110px', top: '90px' }} 
+                    title="Take a Quiz"
+                >
+                    {/* Reusing blueBook with a filter, or use redBook if available */}
+                    <img 
+                        src={blueBook} 
+                        alt="Quiz Book" 
+                        className="pixel-art" 
+                        style={{filter: 'hue-rotate(150deg)'}} 
+                    />
+                </button>
             </div>
+            
+            {/* ADDITION: Loading Text Overlay */}
+            {isLoadingQuiz && (
+                <div className="loading-text" style={{
+                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+                    color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000'
+                }}>
+                    Summoning Knowledge...
+                </div>
+            )}
 
             {/* The Open Book Overlay (Only visible when writing) */}
             {isWriting && (
