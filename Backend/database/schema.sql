@@ -14,6 +14,14 @@ CREATE TABLE wizards (
     experience INT NOT NULL DEFAULT 0,
     weapon_type VARCHAR(255) DEFAULT 'Grimoire'
 );
-INSERT INTO books(title, chapters, author)
+CREATE TABLE spells(
+    id integer PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    dmgMod INT NOT NULL DEFAULT 1,
+    dmg INT NOT NULL DEFAULT 0,
+    effect BOOLEAN NOT NULL DEFAULT false
+)
+INSERT INTO spells(name, type, dmgMod, dmg, effect) VALUES ('Fire wall', 'destruction', 2, 11, true)
+INSERT INTO books(title, chapters, author) VALUES ('The Great Gatsby', 11, 'F. Scott Fitzgerald');
 INSERT INTO wizards (name, level, experience) VALUES ('Wiz', 1, 0);
-VALUES ('The Great Gatsby', 11, 'F. Scott Fitzgerald');
