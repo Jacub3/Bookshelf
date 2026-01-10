@@ -2,7 +2,12 @@ import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
 import { LEVEL_1 } from './levelData'
 import horizontalWall from './assets/horizontalWall.png';
-//import { Combat } from './Components/CombatTechnology'
+
+import { Combat } from './Components/CombatTechnology' 
+import WizardCharacterSheet from './Components/WizardCharacterSheet'
+
+import Spellbook from './Components/SpellBook' 
+
 import './App.css'
 
 // -- ASSETS --
@@ -49,7 +54,10 @@ function App() {
   const [, setIsWalking] = useState(false); 
   const [animationFrame, setAnimationFrame] = useState(0);
   
+  // -- UI STATES --
   const [showShelf, setShowShelf] = useState(false);
+  const [showCombat, setShowCombat] = useState(false);
+  const [showSpells, setShowSpells] = useState(false);
 
   const keysPressed = useRef<Set<string>>(new Set());
   const tickCount = useRef(0); 
@@ -83,7 +91,13 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (keysPressed.current.has(e.key)) return; 
       keysPressed.current.add(e.key);
-      if (e.key === 'Escape') setShowShelf(false);
+      
+      // Close overlays with Escape
+      if (e.key === 'Escape') {
+          setShowShelf(false);
+          setShowCombat(false);
+          setShowSpells(false);
+      }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key);
@@ -108,6 +122,7 @@ function App() {
       const col = Math.floor((currentPos.x + 25) / TILE_SIZE);
       const row = Math.floor((currentPos.y + 25) / TILE_SIZE);
       const tile = LEVEL_1[row]?.[col];
+      // Rug opens Bookshelf
       if (tile >= 20 && tile <= 28) {
           setShowShelf(true);
       }
@@ -115,7 +130,8 @@ function App() {
 
   // -- GAME LOOP --
   useEffect(() => {
-    if (showShelf) return;
+    // Pause movement if any UI is open
+    if (showShelf || showCombat || showSpells) return;
 
     const loop = () => {
       const currentPos = posRef.current;
@@ -176,20 +192,45 @@ function App() {
 
     animationReq.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationReq.current!);
-  }, [showShelf]); 
+  }, [showShelf, showCombat, showSpells]); // Added new states to dependency
 
   const SPRITE_OFFSET_X = -35; 
   const SPRITE_OFFSET_Y = -26; 
 
   return (
     <>
-      <h1>Library Map</h1>
-      <p style={{textAlign:'center', color:'#ccc'}}>Walk to the Rug. Press 'E'.</p>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding: '0 20px'}}>
+        <div>
+           <h1>Library Map</h1>
+           <p style={{color:'#ccc'}}>Walk to the Rug & Press 'E'. Use buttons to Fight or manage Spells.</p>
+        </div>
+        
+        {/* --- HUD: Character Sheet --- */}
+        <div>
+           <WizardCharacterSheet />
+        </div>
+      </div>
+
+      {/* --- MENU BAR --- */}
+      <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', justifyContent:'center' }}>
+          <button onClick={() => setShowCombat(true)} style={{background: '#d32f2f', color: 'white'}}>
+             ⚔️ Enter Combat Arena
+          </button>
+          <button onClick={() => setShowSpells(true)} style={{background: '#9c27b0', color: 'white'}}>
+             📖 Open Spellbook
+          </button>
+      </div>
+
       <div
         className="camera-viewport"
         style={{
           width: VIEWPORT_WIDTH,
           height: VIEWPORT_HEIGHT,
+          margin: '0 auto',
+          position: 'relative', 
+          overflow: 'hidden',
+          border: '4px solid #333',
+          borderRadius: '8px'
         }}
       >  
         <div 
@@ -201,63 +242,59 @@ function App() {
             transition: 'transform 0.1s linear', 
           }}
         >
-                  {LEVEL_1.map((row, rowIndex) => (
-          row.map((tileType, colIndex) => {
-             let content: ReactNode = null;
-             let tileClass = 'tile-floor';
-              if (tileType === 1) {
-                // We render the image for tile 1 here
-                content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
-              }
-             if ([2,3,4].includes(tileType)){
-               tileClass = 'grass';
-               content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
-             }
-             if (tileType >= 20 && tileType <= 28) {
-                tileClass = 'tile-rug'; 
-                content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
-             }
-             if (tileType === 19){
-                tileClass = 'Bookshelf';
-                content = <img src={TILE_IMAGES[tileType]} />;
-             }
+          {LEVEL_1.map((row, rowIndex) => (
+            row.map((tileType, colIndex) => {
+               let content: ReactNode = null;
+               let tileClass = 'tile-floor';
+                if (tileType === 1) {
+                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
+                }
+               if ([2,3,4].includes(tileType)){
+                 tileClass = 'grass';
+                 content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
+               }
+               if (tileType >= 20 && tileType <= 28) {
+                  tileClass = 'tile-rug'; 
+                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
+               }
+               if (tileType === 19){
+                  tileClass = 'Bookshelf';
+                  content = <img src={TILE_IMAGES[tileType]} />;
+               }
 
-             //<Combat></Combat>
+               return (
+                 <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
+                    {content}
+                 </div>
+               );
+            })
+          ))}
 
-             return (
-               <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
-                  {content}
-               </div>
-             );
-          })
-        ))}
-
-        <div 
-          className="character"
-          style={{
-            transform: `translate(${pos.x}px, ${pos.y}px)`, 
-          }}
-        >
-           <div 
-             className="character_sprite"
-             style={{
-               transform: direction === 'left' ? 'scaleX(-1)' : 'none',
-               
-               backgroundPosition: `
-                ${-((SPRITE_MAP[direction].col + (animationFrame % SPRITE_MAP[direction].frames)) * 50) + SPRITE_OFFSET_X}px 
-                ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
-               `
-             }}
-           />
-
+          <div 
+            className="character"
+            style={{
+              transform: `translate(${pos.x}px, ${pos.y}px)`, 
+            }}
+          >
+             <div 
+               className="character_sprite"
+               style={{
+                 transform: direction === 'left' ? 'scaleX(-1)' : 'none',
+                 
+                 backgroundPosition: `
+                  ${-((SPRITE_MAP[direction].col + (animationFrame % SPRITE_MAP[direction].frames)) * 50) + SPRITE_OFFSET_X}px 
+                  ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
+                 `
+               }}
+             />
+          </div>
+          <div className="character_shadow"></div>
         </div>
-
-
-           <div className="character_shadow"></div>
-        </div>
-
       </div>
 
+      {/* --- OVERLAYS --- */}
+
+      {/* 1. Bookshelf Overlay */}
       {showShelf && (
         <div id="ui-overlay-container" className="ui-overlay">
           <div className="ui-content">
@@ -272,6 +309,27 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* 2. Combat Overlay */}
+      {showCombat && (
+        <div className="ui-overlay" style={{background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
+          <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '600px', maxHeight: '90vh', overflow: 'auto'}}>
+             <button onClick={() => setShowCombat(false)} style={{float: 'right'}}>Close (Esc)</button>
+             <Combat />
+          </div>
+        </div>
+      )}
+
+      {/* 3. Spellbook Overlay */}
+      {showSpells && (
+        <div className="ui-overlay" style={{background: 'rgba(50, 0, 50, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
+          <div style={{background: '#fff0f5', padding: '20px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflow: 'auto'}}>
+             <button onClick={() => setShowSpells(false)} style={{float: 'right'}}>Close (Esc)</button>
+             <Spellbook />
+          </div>
+        </div>
+      )}
+
     </>
   )
 }

@@ -50,7 +50,19 @@ app.put("/spells/:id", async (req, res) => {
     await updateSpell(id, name, type, dmgMod, dmg, effect);
     res.status(200).send({ message: "Spell updated" });
 });
+app.get("/wizards/:id", async (req, res) => {
+    const id = req.params.id;
+    const wizard = await getWizard(id);
+    res.send(wizard);
+});
 
+// Add Experience (Level Up logic is handled in database.js)
+app.post("/wizards/:id/experience", async (req, res) => {
+    const id = req.params.id;
+    const { amount } = req.body;
+    const result = await addExperience(id, amount);
+    res.send(result);
+});
 app.use((err, req, res, next) => {
   console.error(err.stack)
   res.status(500).send('Something broke!')
