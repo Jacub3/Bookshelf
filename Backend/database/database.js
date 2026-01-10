@@ -25,6 +25,29 @@ export async function createBook(title, author, contents) {
     return result.insertId
 }
 
+export async function getSpell(id){
+    const [rows] = await pool.query('SELECT * FROM spells WHERE id = ?' [id])
+    return rows[0]
+}
+
+export async function addSpell(name, type, dmgMod, dmg, effect){
+    const [result] = await pool.query('INSERT INTO spells (name, type, dmgMod, dmg, effect) VALUES (?, ?, ?, ?, ?)', [name, type, dmgMod, dmg, effect])
+    return result.insertId
+}
+
+export async function deleteSpell(id) {
+    const [result] = await pool.query('DELETE FROM spells WHERE id = ?', [id]);
+    return result;
+}
+
+export async function updateSpell(id, name, type, dmgMod, dmg, effect) {
+    const [result] = await pool.query(
+        'UPDATE spells SET name = ?, type = ?, dmgMod = ?, dmg = ?, effect = ? WHERE id = ?',
+        [name, type, dmgMod, dmg, effect, id]
+    );
+    return result;
+}
+
 export async function getWizard(id) {
     const [rows] = await pool.query('SELECT * FROM wizards WHERE id = ?', [id])
     return rows[0]
