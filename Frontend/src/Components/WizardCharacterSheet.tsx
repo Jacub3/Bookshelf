@@ -14,14 +14,7 @@ export interface defualtWiz{
     weaponType: string
     attackOptions: string[]
 }
-
-// interface wizardProps{
-
-
-// }
 // export function buildWiz({name, level, experience, weaponType}){
-
-
 
 
 
