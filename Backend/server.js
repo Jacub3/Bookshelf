@@ -5,7 +5,7 @@
 
 import express from 'express'
 import cors from 'cors'
-import { getBooks, getBook, createBook } from './database/database.js'
+import { getBooks, getBook, createBook, getSpell, addSpell, deleteSpell, updateSpell } from './database/database.js'
 import dotenv from 'dotenv'
 
 dotenv.config()
@@ -31,6 +31,25 @@ app.post("/books", async (req, res) => {
     const note = await createBook(title, author, contents)
     res.status(201).send(note)
 })
+
+app.post("/spells", async (req, res) => {
+    const { name, type, dmgMod, dmg, effect } = req.body;
+    const id = await addSpell(name, type, dmgMod, dmg, effect);
+    res.status(201).send({ id, name, type, dmgMod, dmg, effect });
+});
+
+app.delete("/spells/:id", async (req, res) => {
+    const id = req.params.id;
+    await deleteSpell(id);
+    res.status(200).send({ message: "Spell destroyed" });
+});
+
+app.put("/spells/:id", async (req, res) => {
+    const id = req.params.id;
+    const { name, type, dmgMod, dmg, effect } = req.body;
+    await updateSpell(id, name, type, dmgMod, dmg, effect);
+    res.status(200).send({ message: "Spell updated" });
+});
 
 app.use((err, req, res, next) => {
   console.error(err.stack)
