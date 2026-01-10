@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
 import { LEVEL_1 } from './levelData'
+import horizontalWall from './assets/horizontalWall.png';
 //import { Combat } from './Components/CombatTechnology'
 import './App.css'
 
@@ -28,7 +29,7 @@ const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 600;
 
 const TILE_IMAGES: Record<number, string> = {
-  2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
+  1: horizontalWall, 2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
   20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 
   24: rugL, 25: rugR, 26: rugBL, 27: rugB, 28: rugBR
 };
@@ -204,8 +205,10 @@ function App() {
           row.map((tileType, colIndex) => {
              let content: ReactNode = null;
              let tileClass = 'tile-floor';
-             
-             if (tileType === 1) tileClass = 'tile-wall';
+              if (tileType === 1) {
+                // We render the image for tile 1 here
+                content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
+              }
              if ([2,3,4].includes(tileType)){
                tileClass = 'grass';
                content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;

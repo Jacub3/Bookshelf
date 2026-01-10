@@ -61,7 +61,8 @@ export async function generateBookQuiz(title: string, author: string, chapters: 
 
   // UPDATE: Inject numQuestions into the prompt
   const prompt = `Generate a ${numQuestions}-question multiple choice quiz for the book "${title}" by ${author}. 
-  The tone should be scholarly yet accessible. Ensure the correct answer is in the options list.`;
+  The tone should be scholarly yet accessible. Ensure the correct answer is in the options list. Each question should 
+  be suitably similar to one another to ensure difficulty and comprehension.`;
 
   try {
     const result = await model.generateContent(prompt);
