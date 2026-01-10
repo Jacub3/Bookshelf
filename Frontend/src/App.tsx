@@ -214,10 +214,10 @@ function App() {
       {/* --- MENU BAR --- */}
       <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', justifyContent:'center' }}>
           <button onClick={() => setShowCombat(true)} style={{background: '#d32f2f', color: 'white'}}>
-             ⚔️ Enter Combat Arena
+            Enter Combat Arena
           </button>
           <button onClick={() => setShowSpells(true)} style={{background: '#9c27b0', color: 'white'}}>
-             📖 Open Spellbook
+            Open Spellbook
           </button>
       </div>
 
