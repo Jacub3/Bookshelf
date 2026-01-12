@@ -2,104 +2,107 @@ import "./Bookshelf.css"
 import blueBook from "../assets/blueBook.png"
 import { type Dispatch, type SetStateAction, type ChangeEvent } from 'react';
 import { useState } from 'react'
-
-// ADDITION: Imports for the Quiz feature
 import { generateBookQuiz, type QuizData } from "../services/AIquizing";
 import { QuizBook } from "./QuizBook";
 
-export interface books{
+// 1. Add 'genre' to the interface
+export interface books {
     id: number
     title: string
     contents: number
     author: string
+    genre: string 
     created: boolean
 } 
-interface BookListProps{
+
+interface BookListProps {
     book: books[],
     setBook: Dispatch<SetStateAction<books[]>>
 }
 
-export function BookList({setBook}: BookListProps) {
-    // Consolidated state for the "Writing Mode"
+// 2. Define Color Filters for Genres
+const GENRE_COLORS: Record<string, string> = {
+    "Fantasy": "hue-rotate(0deg)",          // Blue (Default)
+    "Science Fiction": "hue-rotate(290deg)", // Pink/Purple
+    "Horror": "hue-rotate(140deg) brightness(0.8)", // Red/Dark
+    "Mystery": "hue-rotate(200deg) contrast(1.2)",  // Deep Green
+    "History": "hue-rotate(45deg) sepia(0.5)",      // Brown/Gold
+    "Romance": "hue-rotate(320deg) brightness(1.1)", // Hot Pink
+};
+
+export function BookList({book, setBook}: BookListProps) {
     const [isWriting, setIsWriting] = useState<boolean>(false);
     
-    const [titleText, setTitleText] = useState <string>('');
-    const [contentsText, setContentsText] = useState <number | ''>('');
-    const [authorText, setAuthorText] = useState <string>('');
+    // Form States
+    const [titleText, setTitleText] = useState<string>('');
+    const [contentsText, setContentsText] = useState<number | ''>('');
+    const [authorText, setAuthorText] = useState<string>('');
+    const [selectedGenre, setSelectedGenre] = useState<string>('Fantasy'); // Default Genre
 
-    // ADDITION: State for the Quiz Mode
+    // Quiz States
     const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
     const [activeQuiz, setActiveQuiz] = useState<QuizData | null>(null);
 
     // Handlers
-    const handleTitle = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setTitleText(event.target.value);
-    }
-    const handleContents = (event: ChangeEvent<HTMLInputElement>) => {
-        const val = event.target.value;
+    const handleTitle = (e: ChangeEvent<HTMLTextAreaElement>) => setTitleText(e.target.value);
+    const handleAuthor = (e: ChangeEvent<HTMLTextAreaElement>) => setAuthorText(e.target.value);
+    const handleGenre = (e: ChangeEvent<HTMLSelectElement>) => setSelectedGenre(e.target.value);
+    const handleContents = (e: ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
         setContentsText(val === '' ? '': Number(val));
     }
-    const handleAuthor = (event: ChangeEvent<HTMLTextAreaElement>) => {
-        setAuthorText(event.target.value);
-    }
 
-    // Opens the writing interface
     const startWriting = () => {
-        // Reset fields if you want a blank book every time, 
-        // or remove these lines to keep the draft.
         setTitleText('');
         setAuthorText('');
         setContentsText('');
-        
+        setSelectedGenre('Fantasy'); // Reset to default
         setIsWriting(true);
     }
 
     const startQuiz = async (title: string, author: string, chapters: number) => {
         setIsLoadingQuiz(true);
-        const data = await generateBookQuiz(title, author, chapters);
-        setIsLoadingQuiz(false);
-        if (data) {
-            setActiveQuiz(data);
-        } else {
-            console.error("Failed to generate quiz data.");
+        try {
+            const data = await generateBookQuiz(title, author, chapters);
+            if (data) {
+                setActiveQuiz(data);
+            } else {
+                throw new Error("No data returned");
+            }
+        } catch (error) {
+            console.error("Quiz Error:", error);
+            alert("Could not summon this book's spirit. (Try a different book or check console)");
+        } finally {
+            setIsLoadingQuiz(false);
         }
     };
 
-    // Saves the book and closes interface
     const handleSaveButton = async () => {
         const newBook = {
             title: titleText,
             contents: Number(contentsText),
             author: authorText,
+            genre: selectedGenre // Save the genre
         }
-        try{
-            // send data to backend
+        try {
             const response = await fetch('http://localhost:8080/books', {
                 method: 'POST',
-                headers: {
-                    'Content-type': 'application/JSON'
-                },
+                headers: { 'Content-type': 'application/JSON' },
                 body: JSON.stringify(newBook),
             });
 
-            if (!response.ok){
-                throw new Error('Network was not okay')
-            }
-
+            if (!response.ok) throw new Error('Network was not okay');
             const resultID = await response.json();
 
             setBook(prev => ([
                 ...prev,
                 {
                     id: resultID,
-                    title: titleText,
-                    contents: Number(contentsText),
-                    author: authorText,
+                    ...newBook,
                     created: true
                 }
             ]));
             
-            // Close the writing interface on success
             setIsWriting(false);
 
         } catch(error){
@@ -114,49 +117,57 @@ export function BookList({setBook}: BookListProps) {
 
     return(
         <div>
-            {/* The Clickable Button on the Shelf */}
-            <div className = "book-container">
+            <div className="book-container">
+                {/* 3. The "Create New" Button (Always Blue or distinct) */}
                 <button
                     id="create-book-btn"
-                    onClick = {startWriting}
-                    className = "pixel-book-button"
+                    onClick={startWriting}
+                    className="pixel-book-button"
                     title="Write a new book"
                 >
-                    <img src={blueBook} alt="Blue Book" className="pixel-art" />
-                </button>
-
-                <button
-                    onClick={() => {startQuiz(titleText, authorText, Number(contentsText))}}
-                    className="pixel-book-button"
-                    style={{ left: '110px', top: '90px' }} 
-                    title="Take a Quiz"
-                >
-                    {/* Reusing blueBook with a filter, or use redBook if available */}
                     <img 
                         src={blueBook} 
-                        alt="Quiz Book" 
+                        alt="New Book" 
                         className="pixel-art" 
-                        style={{filter: 'hue-rotate(150deg)'}} 
+                        style={{ opacity: 0.8, filter: 'grayscale(100%)' }} // Greyed out to look like a "ghost" book
                     />
                 </button>
+
+                {/* 4. Render Saved Books with Colors */}
+                {book.map((b) => (
+                    <button
+                        key={b.id}
+                        onClick={() => startQuiz(b.title, b.author, b.contents)}
+                        className="pixel-book-button"
+                        style={{ 
+                            position: 'relative', 
+                        }} 
+                        title={`${b.title} (${b.genre})`}
+                    >
+                        <img 
+                            src={blueBook} 
+                            alt={b.title} 
+                            className="pixel-art" 
+                            style={{ 
+                                filter: GENRE_COLORS[b.genre] || GENRE_COLORS['Fantasy'] 
+                            }} 
+                        />
+                    </button>
+                ))}
             </div>
             
-            {/* ADDITION: Loading Text Overlay */}
             {isLoadingQuiz && (
                 <div className="loading-text" style={{
-                    position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
-                    color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000'
+                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+                    color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000', zIndex: 3000
                 }}>
                     Summoning Knowledge...
                 </div>
             )}
 
-            {/* The Open Book Overlay (Only visible when writing) */}
             {isWriting && (
                 <div className="writing-overlay">
                     <div className="open-book">
-                        
-                        {/* LEFT PAGE: Title and Author */}
                         <div className="book-page page-left">
                             <textarea
                                 className="handwritten-input title-input"
@@ -173,6 +184,29 @@ export function BookList({setBook}: BookListProps) {
                                 maxLength={30}
                             />
                             
+                            {/* 5. Genre Selector UI */}
+                            <div style={{ marginTop: '1rem' }}>
+                                <label style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: '#5d4037' }}>Book Aura:</label>
+                                <select 
+                                    value={selectedGenre} 
+                                    onChange={handleGenre}
+                                    style={{
+                                        display: 'block',
+                                        width: '100%',
+                                        padding: '5px',
+                                        marginTop: '5px',
+                                        background: 'rgba(255,255,255,0.5)',
+                                        border: '1px solid #d0c0a0',
+                                        borderRadius: '4px',
+                                        fontFamily: 'monospace'
+                                    }}
+                                >
+                                    {Object.keys(GENRE_COLORS).map(g => (
+                                        <option key={g} value={g}>{g}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <div className="book-actions">
                                 <button className="ink-btn" onClick={() => setIsWriting(false)}>
                                     Discard
@@ -183,12 +217,11 @@ export function BookList({setBook}: BookListProps) {
                             </div>
                         </div>
 
-                        {/* RIGHT PAGE: Contents */}
                         <div className="book-page page-right">
                             <input
                                 type="number"
                                 className="handwritten-input contents-input"
-                                placeholder="Enter a number..."
+                                placeholder="Chapters..."
                                 value={contentsText}
                                 onChange={handleContents}
                                 style={{
@@ -201,7 +234,6 @@ export function BookList({setBook}: BookListProps) {
                                 }}
                             />
                         </div>
-                        
                     </div>
                 </div>
             )}

@@ -1,3 +1,17 @@
+.book-container {
+    position: absolute;
+    top: 8px;        /* Moves the whole row down to the shelf plank */
+    left: -1px;       /* Moves the whole row right to the start of the shelf */
+    
+    display: flex;          /* This lines the books up side-by-side */
+    align-items: flex-end;  /* Aligns bottoms of books (useful if they have different heights) */
+    gap: 3px;               /* Space between each book */
+    
+    width: 200px;     /* Optional: width limit to wrap books if you have too many */
+    flex-wrap: wrap;  /* Wraps to a new row if you exceed the width */
+    pointer-events: none; /* Allows clicks to pass through empty space */
+}
+
 /* Styling for the button container */
 .pixel-book-button {
     background: none;
@@ -22,10 +36,13 @@
 }
 
 .pixel-book-button {
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
     background: none;
     border: none;
-    cursor: pointer;
     padding: 0;
+    cursor: pointer;
 }
 .quiz-option-btn {
     display: block;
