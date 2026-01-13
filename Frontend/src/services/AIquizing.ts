@@ -25,12 +25,12 @@ export async function generateBookQuiz(title: string, author: string, chapters: 
     return null;
   }
 
-  // LOGIC: Calculate questions based on chapters
-  // We use Math.max(1, ...) to ensure we don't ask for 0 questions if the input is empty
-  const numQuestions = Math.max(1, chapters * 2);
+  // 1. Calculate Total Questions (2 per chapter, minimum of 2 total)
+  // We use Math.max to prevent asking for 0 questions if user enters 0 chapters
+  const numQuestions = Math.max(2, chapters * 2);
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash",
+    model: "gemini-1.5-flash", // UPDATED: Changed 2.5 (invalid) to 1.5
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -59,10 +59,29 @@ export async function generateBookQuiz(title: string, author: string, chapters: 
     },
   });
 
-  // UPDATE: Inject numQuestions into the prompt
-  const prompt = `Generate a ${numQuestions}-question multiple choice quiz for the book "${title}" by ${author}. 
-  The tone should be scholarly yet accessible. Ensure the correct answer is in the options list. Each question should 
-  be suitably similar to one another to ensure difficulty and comprehension.`;
+  const prompt = `
+  Create a trivia quiz for the book "${title}" by ${author}.
+  
+  CRITICAL INSTRUCTIONS:
+  - Do NOT use direct excerpts or copyrighted passages from the book.
+  - Create ORIGINAL questions based on themes, character motivations, and plot summaries.
+  - If the book is very famous, focus on analysis rather than recitation.
+  
+  - Generate exactly ${numQuestions} questions (${chapters} chapters * 2 questions each).
+  
+  - Return the output strictly as a JSON object with this format:
+  {
+    "bookTitle": "${title}",
+    "questions": [
+       { 
+         "question": "...", 
+         "options": ["A", "B", "C", "D"], 
+         "correctAnswer": "The correct option text",
+         "explanation": "Why this is correct..."
+       }
+    ]
+  }
+`;
 
   try {
     const result = await model.generateContent(prompt);
