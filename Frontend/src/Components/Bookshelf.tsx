@@ -20,7 +20,7 @@ interface BookListProps {
 }
 
 const GENRE_COLORS: Record<string, string> = {
-    "Fantasy": "hue-rotate(0deg)",          
+    "Fantasy": "hue-rotate(55deg) brightness(1.3) saturate(1.2)",          
     "Science Fiction": "hue-rotate(290deg)", 
     "Horror": "hue-rotate(140deg) brightness(0.8)", 
     "Mystery": "hue-rotate(200deg) contrast(1.2)",  
