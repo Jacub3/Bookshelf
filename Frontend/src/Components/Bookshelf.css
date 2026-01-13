@@ -1,7 +1,21 @@
+#create-book-btn {
+    /* Change from absolute to relative so it respects the Flexbox row */
+    position: relative; 
+    
+    /* Reset coordinates so it doesn't fly away */
+    right: auto;
+    bottom: auto;
+    top: 39px;
+    left: 101px;
+    transform: rotate(-39deg);
+    /* Optional: Add a little space between this button and the saved books */
+    margin-right: 10px; 
+}
+
 .book-container {
     position: absolute;
     top: 8px;        /* Moves the whole row down to the shelf plank */
-    left: -1px;       /* Moves the whole row right to the start of the shelf */
+    left: -24px;       /* Moves the whole row right to the start of the shelf */
     
     display: flex;          /* This lines the books up side-by-side */
     align-items: flex-end;  /* Aligns bottoms of books (useful if they have different heights) */
