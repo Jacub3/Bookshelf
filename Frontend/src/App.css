@@ -1,12 +1,13 @@
 /* Container for the map */
 .camera-viewport {
-  margin: 0 auto;
-
-  overflow: hidden;
-
+  margin: 20px auto; 
+  
   position: relative;
+  overflow: hidden;
+  border: 4px solid #333;
+  border-radius: 8px;
 
-
+  flex-shrink: 0; 
 }
 
 .game-grid {
@@ -194,13 +195,19 @@
   font-family: monospace;
 }
 #root {
-  max-width: 1280px;
-  padding: 2rem;
+  max-width: 100vw; /* Allow full width */
+  min-height: 100vh; /* Fill full height */
+  padding: 0;       /* Remove padding that might cause overflow */
+  margin: 0;
 
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
+  
+  /* THIS CENTERS THE GAME WINDOW */
+  align-items: center; 
+  justify-content: center; 
+  
+  overflow: hidden; /* optional: strict no-scroll enforcement */
 }
 
 /*Bookshelf in app.tsx*/
