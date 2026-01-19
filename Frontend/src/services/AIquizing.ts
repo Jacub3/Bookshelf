@@ -30,7 +30,7 @@ export async function generateBookQuiz(title: string, author: string, chapters: 
   const numQuestions = Math.max(2, chapters * 2);
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash", // UPDATED: Changed 2.5 (invalid) to 1.5
+    model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: {
