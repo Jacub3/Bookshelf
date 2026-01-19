@@ -1,10 +1,17 @@
-import { useEffect, useState, useRef, type ReactNode } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
-import { LEVEL_1 } from './levelData'
+
+// == IMPORT GENERATOR ==
+import { 
+  CHUNK_ROWS,
+  CHUNK_COLS,
+  getChunkKey, 
+  ensureChunksAround, 
+  type WorldMap 
+} from './WorldGenerator'
 
 import { Combat } from './Components/CombatTechnology' 
 import WizardCharacterSheet from './Components/WizardCharacterSheet'
-
 import Spellbook from './Components/SpellBook' 
 
 import './App.css'
@@ -27,7 +34,6 @@ import virticalWallRight from './assets/Wall/virticalWallRight.png'
 import topL from './assets/Wall/TopL.png'
 import topR from './assets/Wall/TopR.png'
 
-
 // -- ASSETS --
 import TheBookshelf from './assets/TheBookshelf.png'
 import BookshelfTile from './assets/BookshelfTile.png'
@@ -45,11 +51,14 @@ import rugB from './assets/BottomRug.png';
 import rugBR from './assets/BottomRightRug.png';
 
 const TILE_SIZE = 50;
-const MOVEMENT_SPEED = 2.5; 
+const MOVEMENT_SPEED = 3.5; 
 const ANIMATION_SPEED = 10; 
-
 const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 600;
+
+// Calculate Pixel Dimensions of a single Chunk
+const CHUNK_WIDTH_PX = CHUNK_COLS * TILE_SIZE;  
+const CHUNK_HEIGHT_PX = CHUNK_ROWS * TILE_SIZE; 
 
 const TILE_IMAGES: Record<number, string> = {
   1: horizontalWall, 2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
@@ -70,7 +79,18 @@ const SPRITE_MAP = {
 function App() {
   const [book, setBook] = useState<books[]>([])
   
-  const [pos, setPos] = useState({ x: 50, y: 50 });
+  // -- MAP STATE --
+  const [world, setWorld] = useState<WorldMap>(() => {
+    const initialMap = {};
+    return ensureChunksAround(initialMap, 0, 0) || initialMap;
+  });
+
+  // Start player near the center of the prebuilt room (approx 8,8)
+  const [pos, setPos] = useState({ 
+    x: 8 * TILE_SIZE, 
+    y: 6 * TILE_SIZE 
+  });
+
   const [direction, setDirection] = useState<'down' | 'up' | 'left' | 'right'>('down');
   const [, setIsWalking] = useState(false); 
   const [animationFrame, setAnimationFrame] = useState(0);
@@ -83,24 +103,17 @@ function App() {
   const keysPressed = useRef<Set<string>>(new Set());
   const tickCount = useRef(0); 
   const animationReq = useRef<number>(0);
-
   const posRef = useRef(pos);
   const directionRef = useRef(direction);
+  const worldRef = useRef(world); 
 
-  let camX = -pos.x + (VIEWPORT_WIDTH / 2) - (TILE_SIZE / 2);
-  let camY = -pos.y + (VIEWPORT_HEIGHT / 2) - (TILE_SIZE / 2);
-
-  const mapWidth = LEVEL_1[0].length * TILE_SIZE;
-  const mapHeight = LEVEL_1.length * TILE_SIZE;
-
-  if (camX > 0) camX = 0;
-  if (camX < -(mapWidth - VIEWPORT_WIDTH)) camX = -(mapWidth - VIEWPORT_WIDTH)
-
-  if (camY > 0) camY = 0;
-  if (camY < -(mapHeight - VIEWPORT_HEIGHT)) camY = -(mapHeight - VIEWPORT_HEIGHT);
+  // Camera Logic (Infinite)
+  const camX = -pos.x + (VIEWPORT_WIDTH / 2) - (TILE_SIZE / 2);
+  const camY = -pos.y + (VIEWPORT_HEIGHT / 2) - (TILE_SIZE / 2);
 
   useEffect(() => { posRef.current = pos; }, [pos]);
   useEffect(() => { directionRef.current = direction; }, [direction]);
+  useEffect(() => { worldRef.current = world; }, [world]);
 
   useEffect (() => {
     fetch('http://localhost:8080/books')
@@ -112,8 +125,6 @@ function App() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (keysPressed.current.has(e.key)) return; 
       keysPressed.current.add(e.key);
-      
-      // Close overlays with Escape
       if (e.key === 'Escape') {
           setShowShelf(false);
           setShowCombat(false);
@@ -131,35 +142,58 @@ function App() {
     };
   }, []);
 
-const isWalkable = (x: number, y: number) => {
+  // -- COORDINATE HELPERS (Wrapped in useCallback) --
+  
+  const getChunkAndTile = useCallback((x: number, y: number) => {
+    // Offset for sprite center
+    const hitX = x + 25; 
+    const hitY = y + 40;
 
-    const col = Math.floor((x + 25) / TILE_SIZE); 
-    const row = Math.floor((y + 40) / TILE_SIZE); 
+    const chunkX = Math.floor(hitX / CHUNK_WIDTH_PX);
+    const chunkY = Math.floor(hitY / CHUNK_HEIGHT_PX);
 
-    if (row < 0 || row >= LEVEL_1.length || col < 0 || col >= LEVEL_1[0].length) return false;
+    // Local Tile Coordinates (handle negative wrapping)
+    const rawCol = Math.floor(hitX / TILE_SIZE) % CHUNK_COLS;
+    const rawRow = Math.floor(hitY / TILE_SIZE) % CHUNK_ROWS;
+
+    const col = rawCol < 0 ? rawCol + CHUNK_COLS : rawCol;
+    const row = rawRow < 0 ? rawRow + CHUNK_ROWS : rawRow;
+
+    return { chunkX, chunkY, col, row };
+  }, []); // No dependencies (constants are external)
+
+  const isWalkable = useCallback((x: number, y: number) => {
+    const { chunkX, chunkY, col, row } = getChunkAndTile(x, y);
+
+    const chunkKey = getChunkKey(chunkX, chunkY);
+    // Use the REF to check world state, so this function doesn't need to depend on 'world' state directly
+    const chunk = worldRef.current[chunkKey];
+
+    if (!chunk) return false;
+
+    const tile = chunk[row]?.[col];
     
-    const tile = LEVEL_1[row][col];
-
+    // Walkable types
     const isFloor = tile === 0;
     const isGrass = tile >= 2 && tile <= 4;
     const isRug = tile >= 20 && tile <= 28;
 
     return isFloor || isGrass || isRug;
-  };
+  }, [getChunkAndTile]); // Depends only on the stable getChunkAndTile
 
-  const checkInteraction = (currentPos: {x: number, y: number}) => {
-      const col = Math.floor((currentPos.x + 25) / TILE_SIZE);
-      const row = Math.floor((currentPos.y + 25) / TILE_SIZE);
-      const tile = LEVEL_1[row]?.[col];
-      // Rug opens Bookshelf
-      if (tile >= 20 && tile <= 28) {
-          setShowShelf(true);
-      }
-  };
+  const checkInteraction = useCallback((currentPos: {x: number, y: number}) => {
+    const { chunkX, chunkY, col, row } = getChunkAndTile(currentPos.x, currentPos.y - 15);
+
+    const chunk = worldRef.current[getChunkKey(chunkX, chunkY)];
+    const tile = chunk?.[row]?.[col];
+
+    if (tile && tile >= 20 && tile <= 28) {
+        setShowShelf(true);
+    }
+  }, [getChunkAndTile]);
 
   // -- GAME LOOP --
   useEffect(() => {
-    // Pause movement if any UI is open
     if (showShelf || showCombat || showSpells) return;
 
     const loop = () => {
@@ -178,7 +212,6 @@ const isWalkable = (x: number, y: number) => {
       let newDirection = currentDir;
       if (dy > 0) newDirection = 'down';
       else if (dy < 0) newDirection = 'up';
-
       if (dx > 0) newDirection = 'right';
       else if (dx < 0) newDirection = 'left';
 
@@ -204,6 +237,15 @@ const isWalkable = (x: number, y: number) => {
         setDirection(newDirection);
         setIsWalking(true);
 
+        // Infinite Map Generation Trigger
+        const chunkX = Math.floor(nextX / CHUNK_WIDTH_PX);
+        const chunkY = Math.floor(nextY / CHUNK_HEIGHT_PX);
+        
+        const updatedWorld = ensureChunksAround(worldRef.current, chunkX, chunkY);
+        if (updatedWorld) {
+          setWorld(updatedWorld);
+        }
+
         tickCount.current++;
         const currentMaxFrames = SPRITE_MAP[newDirection]?.frames || 3;
 
@@ -221,33 +263,80 @@ const isWalkable = (x: number, y: number) => {
 
     animationReq.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationReq.current!);
-  }, [showShelf, showCombat, showSpells]); 
+  }, [showShelf, showCombat, showSpells, isWalkable, checkInteraction]); 
+  // Added isWalkable and checkInteraction to dependencies
 
   const SPRITE_OFFSET_X = -35; 
   const SPRITE_OFFSET_Y = -26; 
+
+  // Memoize rendering for performance
+  const renderedChunks = useMemo(() => {
+    return Object.entries(world).map(([key, grid]) => {
+      const [chunkX, chunkY] = key.split(',').map(Number);
+      
+      return (
+        <div 
+          key={key}
+          className="map-chunk"
+          style={{
+            position: 'absolute',
+            left: chunkX * CHUNK_WIDTH_PX,
+            top: chunkY * CHUNK_HEIGHT_PX,
+            width: CHUNK_WIDTH_PX,
+            height: CHUNK_HEIGHT_PX,
+          }}
+        >
+          {grid.map((row, rowIndex) => (
+             row.map((tileType, colIndex) => {
+               let content: ReactNode = null;
+               let tileClass = 'tile-floor';
+
+               if (TILE_IMAGES[tileType]) {
+                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}} alt="" />;
+                  if (tileType === 1 || (tileType >= 40 && tileType <= 56)) tileClass = 'tile-wall';
+                  else if (tileType === 19) tileClass = 'Bookshelf';
+                  else if (tileType >= 20 && tileType <= 28) tileClass = 'tile-rug';
+                  else if (tileType >= 2 && tileType <= 4) tileClass = 'grass';
+               }
+
+               return (
+                 <div 
+                    key={`${rowIndex}-${colIndex}`} 
+                    className={`tile ${tileClass}`}
+                    style={{
+                      position: 'absolute',
+                      left: colIndex * TILE_SIZE,
+                      top: rowIndex * TILE_SIZE,
+                      width: TILE_SIZE,
+                      height: TILE_SIZE
+                    }}
+                 >
+                    {content}
+                 </div>
+               );
+            })
+          ))}
+        </div>
+      );
+    });
+  }, [world]);
 
   return (
     <>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding: '0 20px'}}>
         <div>
-           <h1>Library Map</h1>
-           <p style={{color:'#ccc'}}>Walk to the Rug & Press 'E'. Use buttons to Fight or manage Spells.</p>
+           <h1>The Library</h1>
+           <p style={{color:'#ccc'}}>
+             POS: {Math.round(pos.x)}, {Math.round(pos.y)} | 
+             CHUNK: {Math.floor(pos.x/CHUNK_WIDTH_PX)}, {Math.floor(pos.y/CHUNK_HEIGHT_PX)}
+           </p>
         </div>
-        
-        {/* --- HUD: Character Sheet --- */}
-        <div>
-           <WizardCharacterSheet />
-        </div>
+        <div><WizardCharacterSheet /></div>
       </div>
 
-      {/* --- MENU BAR --- */}
       <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', justifyContent:'center' }}>
-          <button onClick={() => setShowCombat(true)} style={{background: '#d32f2f', color: 'white'}}>
-            Enter Combat Arena
-          </button>
-          <button onClick={() => setShowSpells(true)} style={{background: '#9c27b0', color: 'white'}}>
-            Open Spellbook
-          </button>
+          <button onClick={() => setShowCombat(true)} style={{background: '#d32f2f', color: 'white'}}>Enter Combat Arena</button>
+          <button onClick={() => setShowSpells(true)} style={{background: '#9c27b0', color: 'white'}}>Open Spellbook</button>
       </div>
 
       <div
@@ -259,56 +348,31 @@ const isWalkable = (x: number, y: number) => {
           position: 'relative', 
           overflow: 'hidden',
           border: '4px solid #333',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          background: '#0a0a0a'
         }}
       >  
         <div 
-          className="game-grid"
+          className="game-world"
           style={{
-            width: mapWidth, 
-            height: mapHeight,
             transform: `translate(${camX}px, ${camY}px)`,
-            transition: 'transform 0.1s linear', 
+            willChange: 'transform',
           }}
         >
-          {LEVEL_1.map((row, rowIndex) => (
-            row.map((tileType, colIndex) => {
-               let content: ReactNode = null;
-               let tileClass = 'tile-floor';
-
-               if (TILE_IMAGES[tileType]) {
-                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}} alt="" />;
-                  
-                  if (tileType === 1 || (tileType >= 40 && tileType <= 56)) {
-                    tileClass = 'tile-wall';
-                  } else if (tileType === 19) {
-                    tileClass = 'Bookshelf';
-                  } else if (tileType >= 20 && tileType <= 28) {
-                    tileClass = 'tile-rug';
-                  } else if (tileType >= 2 && tileType <= 4) {
-                    tileClass = 'grass';
-                  }
-               }
-
-               return (
-                 <div key={`${rowIndex}-${colIndex}`} className={`tile ${tileClass}`}>
-                    {content}
-                 </div>
-               );
-            })
-          ))}
+          {renderedChunks}
 
           <div 
             className="character"
             style={{
+              position: 'absolute',
               transform: `translate(${pos.x}px, ${pos.y}px)`, 
+              zIndex: 10
             }}
           >
              <div 
                className="character_sprite"
                style={{
                  transform: direction === 'left' ? 'scaleX(-1)' : 'none',
-                 
                  backgroundPosition: `
                   ${-((SPRITE_MAP[direction].col + (animationFrame % SPRITE_MAP[direction].frames)) * 50) + SPRITE_OFFSET_X}px 
                   ${-(SPRITE_MAP[direction].row * 50) + SPRITE_OFFSET_Y}px
@@ -316,13 +380,10 @@ const isWalkable = (x: number, y: number) => {
                }}
              />
           </div>
-          <div className="character_shadow"></div>
+          <div className="character_shadow" style={{position:'absolute', transform: `translate(${pos.x}px, ${pos.y}px)`}}></div>
         </div>
       </div>
 
-      {/* --- OVERLAYS --- */}
-
-      {/* 1. Bookshelf Overlay */}
       {showShelf && (
         <div id="ui-overlay-container" className="ui-overlay">
           <div className="ui-content">
@@ -338,7 +399,6 @@ const isWalkable = (x: number, y: number) => {
         </div>
       )}
 
-      {/* 2. Combat Overlay */}
       {showCombat && (
         <div className="ui-overlay" style={{background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
           <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '600px', maxHeight: '90vh', overflow: 'auto'}}>
@@ -348,7 +408,6 @@ const isWalkable = (x: number, y: number) => {
         </div>
       )}
 
-      {/* 3. Spellbook Overlay */}
       {showSpells && (
         <div className="ui-overlay" style={{background: 'rgba(50, 0, 50, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
           <div style={{background: '#fff0f5', padding: '20px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflow: 'auto'}}>
@@ -357,7 +416,6 @@ const isWalkable = (x: number, y: number) => {
           </div>
         </div>
       )}
-
     </>
   )
 }
