@@ -22,6 +22,10 @@ import rightTopL from './assets/Wall/RightTopL.png'
 import leftBotL from './assets/Wall/LeftBotL.png'
 import middleTopL from './assets/Wall/MiddleTopL.png'
 import middleBotL from './assets/Wall/MiddleBotL.png'
+import virticalWallLeft from './assets/Wall/virticalWallLeft.png'
+import virticalWallRight from './assets/Wall/virticalWallRight.png'
+import topL from './assets/Wall/TopL.png'
+import topR from './assets/Wall/TopR.png'
 
 
 // -- ASSETS --
@@ -52,8 +56,8 @@ const TILE_IMAGES: Record<number, string> = {
   20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 24: rugL, 25: rugR, 26: rugBL, 27: rugB,
   28: rugBR, 40: horizontalbottomWall, 41: cornerBottomLeft, 42: cornerBottomRight,
   43: cornerTopLeft, 44: cornerTopRight, 45: horiTopBottom, 46: horiTopTop, 47: rightTopL,
-  48: leftBotL
-
+  48: leftBotL, 49: middleTopL, 50: middleTopL, 51: middleBotL, 52: virticalWallLeft,
+  53: virticalWallRight, 55: topL, 56: topR
 };
 
 const SPRITE_MAP = {
@@ -127,12 +131,20 @@ function App() {
     };
   }, []);
 
-  const isWalkable = (x: number, y: number) => {
+const isWalkable = (x: number, y: number) => {
+
     const col = Math.floor((x + 25) / TILE_SIZE); 
     const row = Math.floor((y + 40) / TILE_SIZE); 
+
     if (row < 0 || row >= LEVEL_1.length || col < 0 || col >= LEVEL_1[0].length) return false;
+    
     const tile = LEVEL_1[row][col];
-    return tile !== 1 && tile !== 19;
+
+    const isFloor = tile === 0;
+    const isGrass = tile >= 2 && tile <= 4;
+    const isRug = tile >= 20 && tile <= 28;
+
+    return isFloor || isGrass || isRug;
   };
 
   const checkInteraction = (currentPos: {x: number, y: number}) => {
@@ -209,7 +221,7 @@ function App() {
 
     animationReq.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationReq.current!);
-  }, [showShelf, showCombat, showSpells]); // Added new states to dependency
+  }, [showShelf, showCombat, showSpells]); 
 
   const SPRITE_OFFSET_X = -35; 
   const SPRITE_OFFSET_Y = -26; 
@@ -263,20 +275,19 @@ function App() {
             row.map((tileType, colIndex) => {
                let content: ReactNode = null;
                let tileClass = 'tile-floor';
-                if (tileType === 1) {
-                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
-                }
-               if ([2,3,4].includes(tileType)){
-                 tileClass = 'grass';
-                 content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}}/>;
-               }
-               if (tileType >= 20 && tileType <= 28) {
-                  tileClass = 'tile-rug'; 
-                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width: '100%', height:'100%'}} />;
-               }
-               if (tileType === 19){
-                  tileClass = 'Bookshelf';
-                  content = <img src={TILE_IMAGES[tileType]} />;
+
+               if (TILE_IMAGES[tileType]) {
+                  content = <img src={TILE_IMAGES[tileType]} className="pixel-art" style={{width:'100%', height:'100%'}} alt="" />;
+                  
+                  if (tileType === 1 || (tileType >= 40 && tileType <= 56)) {
+                    tileClass = 'tile-wall';
+                  } else if (tileType === 19) {
+                    tileClass = 'Bookshelf';
+                  } else if (tileType >= 20 && tileType <= 28) {
+                    tileClass = 'tile-rug';
+                  } else if (tileType >= 2 && tileType <= 4) {
+                    tileClass = 'grass';
+                  }
                }
 
                return (
