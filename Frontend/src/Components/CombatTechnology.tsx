@@ -15,6 +15,7 @@
  * Combat Logic & Enemy Generation (Strict Purity Version)
  *==============================================================================================*/
 import { useState } from 'react';
+import goblinSprite from '../assets/goblin.png'
 
 export interface Enemy {
     name: string;
@@ -48,6 +49,28 @@ function createGoblin(playerLevel: number): Enemy {
         dmg: Math.floor(dmg)
     };
 }
+
+const getSpriteStyle = (type: 'Melee' | 'Range' | 'Healer') => {
+    const spriteSize = 350; 
+    let row = 0;
+
+    switch (type) {
+        case 'Melee':  row = 0; break; //
+        case 'Range':  row = 1; break; //
+        case 'Healer': row = 2; break; //
+    }
+
+    return {
+        // USE THE IMPORTED VARIABLE HERE
+        backgroundImage: `url(${goblinSprite})`, 
+        backgroundRepeat: 'no-repeat',
+        width: `${spriteSize}px`,
+        height: `${spriteSize}px`,
+        // Shift the background up to reveal the correct row
+        backgroundPosition: `0px -${row * spriteSize}px`, 
+        imageRendering: 'pixelated' as const 
+    };
+};
 
 // 2. Calculate Damage (Safe)
 function calculatePlayerDamage(): number {
@@ -165,6 +188,13 @@ export function Combat() {
 
                     <div style={{ background: '#ffebee', padding: '10px' }}>
                         <h3>{enemy.name}</h3>
+                        
+                        {/* NEW SPRITE RENDERER */}
+                        <div style={{ 
+                            ...getSpriteStyle(enemy.type), 
+                            margin: '0 auto 10px auto'
+                        }} />
+
                         <p>Type: {enemy.type}</p>
                         <p>HP: {enemy.hp} / {enemy.maxHp}</p>
                     </div>
