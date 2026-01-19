@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef, useMemo, useCallback, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
 
-// == IMPORT GENERATOR ==
 import { 
   CHUNK_ROWS,
   CHUNK_COLS,
   getChunkKey, 
   ensureChunksAround, 
-  type WorldMap 
+  generateEnemiesForChunk,
+  type WorldMap, 
+  type OverworldEnemy
 } from './WorldGenerator'
 
 import { Combat } from './Components/CombatTechnology' 
@@ -16,7 +17,6 @@ import Spellbook from './Components/SpellBook'
 
 import './App.css'
 
-// == Walls ==
 import horizontalWall from './assets/Wall/horizontalWall.png';
 import horizontalbottomWall from './assets/Wall/bottomWallHorizontal.png'
 import cornerBottomLeft from './assets/Wall/CornerLBottomLeft.png'
@@ -34,7 +34,6 @@ import virticalWallRight from './assets/Wall/virticalWallRight.png'
 import topL from './assets/Wall/TopL.png'
 import topR from './assets/Wall/TopR.png'
 
-// -- ASSETS --
 import TheBookshelf from './assets/TheBookshelf.png'
 import BookshelfTile from './assets/BookshelfTile.png'
 import GrassFlowers from './assets/Grass1.png'
@@ -49,6 +48,7 @@ import rugR from './assets/RightRug.png';
 import rugBL from './assets/BottomLeftRug.png';
 import rugB from './assets/BottomRug.png';
 import rugBR from './assets/BottomRightRug.png';
+import goblinSprite from './assets/goblin.png';
 
 const TILE_SIZE = 50;
 const MOVEMENT_SPEED = 3.5; 
@@ -56,7 +56,6 @@ const ANIMATION_SPEED = 10;
 const VIEWPORT_WIDTH = 800;
 const VIEWPORT_HEIGHT = 600;
 
-// Calculate Pixel Dimensions of a single Chunk
 const CHUNK_WIDTH_PX = CHUNK_COLS * TILE_SIZE;  
 const CHUNK_HEIGHT_PX = CHUNK_ROWS * TILE_SIZE; 
 
@@ -79,13 +78,15 @@ const SPRITE_MAP = {
 function App() {
   const [book, setBook] = useState<books[]>([])
   
-  // -- MAP STATE --
   const [world, setWorld] = useState<WorldMap>(() => {
     const initialMap = {};
-    return ensureChunksAround(initialMap, 0, 0) || initialMap;
+    const { updatedMap } = ensureChunksAround(initialMap, 0, 0);
+    return updatedMap || initialMap;
   });
 
-  // Start player near the center of the prebuilt room (approx 8,8)
+  const [overworldEnemies, setOverworldEnemies] = useState<OverworldEnemy[]>([]);
+  const [activeCombatEnemyId, setActiveCombatEnemyId] = useState<string | null>(null);
+
   const [pos, setPos] = useState({ 
     x: 8 * TILE_SIZE, 
     y: 6 * TILE_SIZE 
@@ -95,7 +96,6 @@ function App() {
   const [, setIsWalking] = useState(false); 
   const [animationFrame, setAnimationFrame] = useState(0);
   
-  // -- UI STATES --
   const [showShelf, setShowShelf] = useState(false);
   const [showCombat, setShowCombat] = useState(false);
   const [showSpells, setShowSpells] = useState(false);
@@ -107,7 +107,6 @@ function App() {
   const directionRef = useRef(direction);
   const worldRef = useRef(world); 
 
-  // Camera Logic (Infinite)
   const camX = -pos.x + (VIEWPORT_WIDTH / 2) - (TILE_SIZE / 2);
   const camY = -pos.y + (VIEWPORT_HEIGHT / 2) - (TILE_SIZE / 2);
 
@@ -123,14 +122,21 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const gameKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd']);
+      if (gameKeys.has(e.key) || gameKeys.has(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+
       if (keysPressed.current.has(e.key)) return; 
       keysPressed.current.add(e.key);
+      
       if (e.key === 'Escape') {
           setShowShelf(false);
           setShowCombat(false);
           setShowSpells(false);
       }
     };
+    
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key);
     };
@@ -142,17 +148,13 @@ function App() {
     };
   }, []);
 
-  // -- COORDINATE HELPERS (Wrapped in useCallback) --
-  
   const getChunkAndTile = useCallback((x: number, y: number) => {
-    // Offset for sprite center
     const hitX = x + 25; 
     const hitY = y + 40;
 
     const chunkX = Math.floor(hitX / CHUNK_WIDTH_PX);
     const chunkY = Math.floor(hitY / CHUNK_HEIGHT_PX);
 
-    // Local Tile Coordinates (handle negative wrapping)
     const rawCol = Math.floor(hitX / TILE_SIZE) % CHUNK_COLS;
     const rawRow = Math.floor(hitY / TILE_SIZE) % CHUNK_ROWS;
 
@@ -160,26 +162,23 @@ function App() {
     const row = rawRow < 0 ? rawRow + CHUNK_ROWS : rawRow;
 
     return { chunkX, chunkY, col, row };
-  }, []); // No dependencies (constants are external)
+  }, []);
 
   const isWalkable = useCallback((x: number, y: number) => {
     const { chunkX, chunkY, col, row } = getChunkAndTile(x, y);
-
     const chunkKey = getChunkKey(chunkX, chunkY);
-    // Use the REF to check world state, so this function doesn't need to depend on 'world' state directly
     const chunk = worldRef.current[chunkKey];
 
     if (!chunk) return false;
 
     const tile = chunk[row]?.[col];
     
-    // Walkable types
     const isFloor = tile === 0;
     const isGrass = tile >= 2 && tile <= 4;
     const isRug = tile >= 20 && tile <= 28;
 
     return isFloor || isGrass || isRug;
-  }, [getChunkAndTile]); // Depends only on the stable getChunkAndTile
+  }, [getChunkAndTile]); 
 
   const checkInteraction = useCallback((currentPos: {x: number, y: number}) => {
     const { chunkX, chunkY, col, row } = getChunkAndTile(currentPos.x, currentPos.y - 15);
@@ -192,7 +191,6 @@ function App() {
     }
   }, [getChunkAndTile]);
 
-  // -- GAME LOOP --
   useEffect(() => {
     if (showShelf || showCombat || showSpells) return;
 
@@ -237,13 +235,17 @@ function App() {
         setDirection(newDirection);
         setIsWalking(true);
 
-        // Infinite Map Generation Trigger
         const chunkX = Math.floor(nextX / CHUNK_WIDTH_PX);
         const chunkY = Math.floor(nextY / CHUNK_HEIGHT_PX);
         
-        const updatedWorld = ensureChunksAround(worldRef.current, chunkX, chunkY);
-        if (updatedWorld) {
-          setWorld(updatedWorld);
+        const { updatedMap, newChunkKeys } = ensureChunksAround(worldRef.current, chunkX, chunkY);
+        
+        if (updatedMap) {
+          setWorld(updatedMap);
+          const newEnemies = newChunkKeys.flatMap(key => generateEnemiesForChunk(key.x, key.y));
+          if (newEnemies.length > 0) {
+              setOverworldEnemies(prev => [...prev, ...newEnemies]);
+          }
         }
 
         tickCount.current++;
@@ -258,18 +260,39 @@ function App() {
         setAnimationFrame(0);
       }
 
+      const px = posRef.current.x + 25; 
+      const py = posRef.current.y + 25; 
+
+      overworldEnemies.forEach(enemy => {
+          const ex = enemy.x + 25;
+          const ey = enemy.y + 25;
+          const dist = Math.sqrt( Math.pow(px - ex, 2) + Math.pow(py - ey, 2) );
+          
+          if (dist < 30) { 
+              setIsWalking(false); 
+              setActiveCombatEnemyId(enemy.id); 
+              setShowCombat(true);
+          }
+      });
+
       animationReq.current = requestAnimationFrame(loop);
     };
 
     animationReq.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationReq.current!);
-  }, [showShelf, showCombat, showSpells, isWalkable, checkInteraction]); 
-  // Added isWalkable and checkInteraction to dependencies
+  }, [showShelf, showCombat, showSpells, isWalkable, checkInteraction, overworldEnemies]); 
+
+  const handleVictory = () => {
+    if (activeCombatEnemyId) {
+        setOverworldEnemies(prev => prev.filter(e => e.id !== activeCombatEnemyId));
+    }
+    setActiveCombatEnemyId(null);
+    setShowCombat(false);
+  };
 
   const SPRITE_OFFSET_X = -35; 
   const SPRITE_OFFSET_Y = -26; 
 
-  // Memoize rendering for performance
   const renderedChunks = useMemo(() => {
     return Object.entries(world).map(([key, grid]) => {
       const [chunkX, chunkY] = key.split(',').map(Number);
@@ -321,6 +344,23 @@ function App() {
     });
   }, [world]);
 
+  const renderedEnemies = overworldEnemies.map(enemy => (
+    <div 
+      key={enemy.id}
+      style={{
+          position: 'absolute',
+          left: enemy.x,
+          top: enemy.y,
+          width: '50px',
+          height: '50px',
+          backgroundImage: `url(${goblinSprite})`,
+          backgroundPosition: '0px 0px', 
+          backgroundSize: '350px',
+          zIndex: 5
+      }}
+    />
+  ));
+
   return (
     <>
       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding: '0 20px'}}>
@@ -335,7 +375,6 @@ function App() {
       </div>
 
       <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', justifyContent:'center' }}>
-          <button onClick={() => setShowCombat(true)} style={{background: '#d32f2f', color: 'white'}}>Enter Combat Arena</button>
           <button onClick={() => setShowSpells(true)} style={{background: '#9c27b0', color: 'white'}}>Open Spellbook</button>
       </div>
 
@@ -360,6 +399,7 @@ function App() {
           }}
         >
           {renderedChunks}
+          {renderedEnemies}
 
           <div 
             className="character"
@@ -402,8 +442,11 @@ function App() {
       {showCombat && (
         <div className="ui-overlay" style={{background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
           <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '600px', maxHeight: '90vh', overflow: 'auto'}}>
-             <button onClick={() => setShowCombat(false)} style={{float: 'right'}}>Close (Esc)</button>
-             <Combat />
+             <button onClick={() => setShowCombat(false)} style={{float: 'right'}}>Run Away (Esc)</button>
+             <Combat 
+                initialEnemyData={overworldEnemies.find(e => e.id === activeCombatEnemyId)?.combatData || { level: 1 }}
+                onVictory={handleVictory} 
+             />
           </div>
         </div>
       )}
