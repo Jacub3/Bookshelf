@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react'
 import { BookList, type books } from './Components/Bookshelf.tsx'
 import { LEVEL_1 } from './levelData'
-import horizontalWall from './assets/horizontalWall.png';
 
 import { Combat } from './Components/CombatTechnology' 
 import WizardCharacterSheet from './Components/WizardCharacterSheet'
@@ -9,6 +8,21 @@ import WizardCharacterSheet from './Components/WizardCharacterSheet'
 import Spellbook from './Components/SpellBook' 
 
 import './App.css'
+
+// == Walls ==
+import horizontalWall from './assets/Wall/horizontalWall.png';
+import horizontalbottomWall from './assets/Wall/bottomWallHorizontal.png'
+import cornerBottomLeft from './assets/Wall/CornerLBottomLeft.png'
+import cornerBottomRight from './assets/Wall/CornerLBottomRight.png'
+import cornerTopLeft from './assets/Wall/CornerLTopLeft.png'
+import cornerTopRight from './assets/Wall/CornerLTopRight.png'
+import horiTopBottom from './assets/Wall/horiTopBottom.png'
+import horiTopTop from './assets/Wall/horiTopTop.png'
+import rightTopL from './assets/Wall/RightTopL.png'
+import leftBotL from './assets/Wall/LeftBotL.png'
+import middleTopL from './assets/Wall/MiddleTopL.png'
+import middleBotL from './assets/Wall/MiddleBotL.png'
+
 
 // -- ASSETS --
 import TheBookshelf from './assets/TheBookshelf.png'
@@ -35,8 +49,11 @@ const VIEWPORT_HEIGHT = 600;
 
 const TILE_IMAGES: Record<number, string> = {
   1: horizontalWall, 2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
-  20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 
-  24: rugL, 25: rugR, 26: rugBL, 27: rugB, 28: rugBR
+  20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 24: rugL, 25: rugR, 26: rugBL, 27: rugB,
+  28: rugBR, 40: horizontalbottomWall, 41: cornerBottomLeft, 42: cornerBottomRight,
+  43: cornerTopLeft, 44: cornerTopRight, 45: horiTopBottom, 46: horiTopTop, 47: rightTopL,
+  48: leftBotL
+
 };
 
 const SPRITE_MAP = {
