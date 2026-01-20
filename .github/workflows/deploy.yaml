@@ -27,21 +27,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          # IMPROVEMENT: Cache dependencies to speed up install
+          cache: 'npm'
+          cache-dependency-path: Frontend/package-lock.json
 
-      # 1. SETUP LOGGING (Create a temporary folder outside dist to save logs safely)
+      # 1. SETUP LOGGING
       - name: Create Temp Log Directory
         run: mkdir -p temp_logs
 
-      # 2. INSTALL (Run in subfolder, save log to temp_logs)
+      # 2. INSTALL
       - name: Install Dependencies
         id: install
         run: |
           cd Frontend
-          # We pipe output to a log file outside the build folder so it survives
           npm install |& tee ../temp_logs/install.log
 
-      # 3. BUILD (Run in subfolder, save log to temp_logs)
-      # This deletes 'dist', which is why we waited to create the dashboard files!
+      # 3. BUILD
       - id: compute-base
         name: Compute base path
         run: |
@@ -52,13 +53,15 @@ jobs:
         id: build
         run: |
           cd Frontend
+          # Ensure your build script (Vite/Webpack) actually uses this argument!
           npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
 
-      # 4. RUN OPTIONAL CHECKS (Lint/Test)
-      # Added "|| true" so the build doesn't fail if you don't have these scripts yet
+      # 4. RUN CHECKS
       - name: Run Linter
         id: lint
         if: ${{ !cancelled() }}
+        # NOTE: '|| echo' prevents the build from failing on lint errors. 
+        # Remove '|| echo...' if you want to stop deployment on errors.
         run: |
           cd Frontend
           npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
@@ -70,53 +73,42 @@ jobs:
           cd Frontend
           npm test |& tee ../temp_logs/test.log || echo "Test script missing or failed" >> ../temp_logs/test.log
 
-      # 5. GENERATE DASHBOARD (Now that dist exists and is stable)
-      - name: Generate Dashboard and Logs
+      # 5. PREPARE DASHBOARD ASSETS (Logs & Markdown)
+      - name: Generate Log HTML and Dashboard MD
         if: ${{ !cancelled() }}
         run: |
-          # Define paths
           DIST="Frontend/dist"
           DOCS="Frontend/docs"
           
-          # Create necessary directories if they don't exist
           mkdir -p $DIST
           mkdir -p $DOCS
 
-          # --- Create HTML Logs from the temp files we saved ---
-          
-          # Installation Log
-          echo "<html><body><pre>" > $DIST/installation.html
-          cat temp_logs/install.log >> $DIST/installation.html
-          echo "</pre></body></html>" >> $DIST/installation.html
-          
-          # Build Log
-          echo "<html><body><pre>" > $DIST/build.html
-          cat temp_logs/build.log >> $DIST/build.html
-          echo "</pre></body></html>" >> $DIST/build.html
-
-          # Lint Log
-          echo "<html><body><pre>" > $DIST/lint.html
-          if [ -f temp_logs/lint.log ]; then cat temp_logs/lint.log >> $DIST/lint.html; fi
-          echo "</pre></body></html>" >> $DIST/lint.html
-
-          # Test Log
-          echo "<html><body><pre>" > $DIST/tests.html
-          if [ -f temp_logs/test.log ]; then cat temp_logs/test.log >> $DIST/tests.html; fi
-          echo "</pre></body></html>" >> $DIST/tests.html
+          # --- Create HTML Wrappers for Logs ---
+          for log in install build lint test; do
+            echo "<html><body><pre>" > $DIST/${log}.html
+            # Check if file exists before catting to avoid errors
+            if [ -f temp_logs/${log}.log ]; then 
+              cat temp_logs/${log}.log >> $DIST/${log}.html
+            else
+              echo "No log found." >> $DIST/${log}.html
+            fi
+            echo "</pre></body></html>" >> $DIST/${log}.html
+          done
 
           # --- Create Dashboard Markdown ---
+          # This file will be converted to HTML in the next step
           printf '## Quick Links\n\n' > $DOCS/dashboard.md
           echo "* [Deployed Site](../): Your actual website." >> $DOCS/dashboard.md
-          echo "* [Installation Log](../installation.html)" >> $DOCS/dashboard.md
+          echo "* [Installation Log](../install.html)" >> $DOCS/dashboard.md
           echo "* [Build Log](../build.html)" >> $DOCS/dashboard.md
           echo "* [Linter Log](../lint.html)" >> $DOCS/dashboard.md
-          echo "* [Test Log](../tests.html)" >> $DOCS/dashboard.md
+          echo "* [Test Log](../test.html)" >> $DOCS/dashboard.md
 
-          # Create Redirects
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting...</body></html>" > $DIST/index.html
-          cp $DIST/dashboard.html $DIST/quick.html
+          # --- Create Redirect at Root ---
+          # Pointing to docs/dashboard.html (explicit extension is safer)
+          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard.html' /></head><body>Redirecting...</body></html>" > $DIST/index.html
 
-      # 6. DOCS GENERATION
+      # 6. DOCS GENERATION (Markdown -> HTML)
       - name: Generate HTML from Markdown
         if: ${{ !cancelled() }}
         uses: ldeluigi/markdown-docs@latest
@@ -124,7 +116,17 @@ jobs:
           src: Frontend/docs
           dst: Frontend/dist/docs/
 
-      # 7. UPLOAD & DEPLOY
+      # 7. POST-PROCESSING (Fixes the logic error)
+      - name: Finalize Assets
+        if: ${{ !cancelled() }}
+        run: |
+          # NOW dashboard.html exists, so we can copy it if needed
+          # Note: markdown-docs usually outputs to the 'dst' folder.
+          if [ -f Frontend/dist/docs/dashboard.html ]; then
+             cp Frontend/dist/docs/dashboard.html Frontend/dist/quick.html
+          fi
+
+      # 8. UPLOAD & DEPLOY
       - name: Setup Pages
         if: ${{ !cancelled() }}
         uses: actions/configure-pages@v5
