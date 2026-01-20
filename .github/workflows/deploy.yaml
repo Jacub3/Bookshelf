@@ -17,6 +17,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # This ensures that if a pipe (|) fails, the whole step fails
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,22 +43,19 @@ jobs:
       - name: Install Dependencies
         id: install
         run: |
+          set -o pipefail
           cd Frontend
-          npm install |& tee ../temp_logs/install.log
+          npm install | tee ../temp_logs/install.log
 
       # 3. BUILD
-      - id: compute-base
-        name: Compute base path
-        run: |
-          repo="${GITHUB_REPOSITORY#*/}"
-          echo "base=/$repo/" >> $GITHUB_OUTPUT
-
+      # We removed the manual base argument. We now trust your vite.config.js
       - name: Build the project
         id: build
         run: |
+          set -o pipefail
           cd Frontend
-          # ensures your build tool knows it is in a subfolder
-          npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
+          # If this step fails, the workflow will now correctly STOP and turn Red.
+          npm run build | tee ../temp_logs/build.log
 
       # 4. RUN CHECKS
       - name: Run Linter
@@ -61,14 +63,15 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           cd Frontend
-          npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
+          # We allow this to "pass" with || true so we can see the logs even if lint fails
+          npm run lint > ../temp_logs/lint.log 2>&1 || true
 
       - name: Run Tests
         id: test
         if: ${{ !cancelled() }}
         run: |
           cd Frontend
-          npm test |& tee ../temp_logs/test.log || echo "Test script missing or failed" >> ../temp_logs/test.log
+          npm test > ../temp_logs/test.log 2>&1 || true
 
       # 5. PREPARE DASHBOARD ASSETS
       - name: Generate Log HTML and Dashboard MD
@@ -77,6 +80,7 @@ jobs:
           DIST="Frontend/dist"
           DOCS="Frontend/docs"
           
+          # Ensure dist exists (in case build failed but we are forcing a run)
           mkdir -p $DIST
           mkdir -p $DOCS
 
@@ -92,11 +96,9 @@ jobs:
           done
 
           # --- Create Dashboard Markdown ---
-          # We use the computed base path so the link is absolute and always correct
-          REPO_URL="${{ steps.compute-base.outputs.base }}"
-          
+          # We use relative path '.' which works great with vite base: './'
           printf '## Quick Links\n\n' > $DOCS/dashboard.md
-          echo "* [Deployed Site]($REPO_URL): Your actual website." >> $DOCS/dashboard.md
+          echo "* [Deployed Site](../): Your actual website." >> $DOCS/dashboard.md
           echo "* [Installation Log](../install.html)" >> $DOCS/dashboard.md
           echo "* [Build Log](../build.html)" >> $DOCS/dashboard.md
           echo "* [Linter Log](../lint.html)" >> $DOCS/dashboard.md
@@ -110,7 +112,14 @@ jobs:
           src: Frontend/docs
           dst: Frontend/dist/docs/
 
-      # 7. UPLOAD & DEPLOY
+      # 7. DEBUG & CHECK
+      - name: Debug Output Directory
+        if: ${{ !cancelled() }}
+        run: |
+          echo "Listing 'Frontend/dist' contents to verify build:"
+          ls -R Frontend/dist || echo "Dist folder missing!"
+
+      # 8. UPLOAD & DEPLOY
       - name: Setup Pages
         if: ${{ !cancelled() }}
         uses: actions/configure-pages@v5
