@@ -5,7 +5,8 @@ CREATE TABLE books (
     title VARCHAR(255) NOT NULL,
     chapters INT NOT NULL,
     author VARCHAR(255) NOT NULL,
-    created TIMESTAMP NOT NULL DEFAULT NOW()
+    created TIMESTAMP NOT NULL DEFAULT NOW(),
+    genre VARCHAR(255) NOT NULL
 );
 CREATE TABLE wizards (
     id integer PRIMARY KEY AUTO_INCREMENT,
@@ -23,5 +24,5 @@ CREATE TABLE spells(
     effect BOOLEAN NOT NULL DEFAULT false
 )
 INSERT INTO spells(name, type, dmgMod, dmg, effect) VALUES ('Fire wall', 'destruction', 2, 11, true)
-INSERT INTO books(title, chapters, author) VALUES ('The Great Gatsby', 11, 'F. Scott Fitzgerald');
+INSERT INTO books(title, chapters, author, genre) VALUES ('The Great Gatsby', 11, 'F. Scott Fitzgerald', 'Classic');
 INSERT INTO wizards (name, level, experience) VALUES ('Wiz', 1, 0);

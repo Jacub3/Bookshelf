@@ -20,11 +20,25 @@ export async function getBook(id) {
     return rows[0]
 }
 
-export async function createBook(title, author, contents) {
-    const [result] = await pool.query('INSERT INTO books (title, author, contents) VALUES (?, ?, ?)', [title, author, contents])
-    return result.insertId
+export async function deleteBook(id){
+    const [result] = await pool.query('DELETE FROM books WHERE id = ?', [id]);
+    return result;
 }
 
+export async function createBook(title, author, contents, genre) {
+    const [result] = await pool.query(
+        'INSERT INTO books (title, author, contents, genre) VALUES (?, ?, ?, ?)', 
+        [title, author, contents, genre]
+    )
+    return result.insertId
+}
+export async function updateBook(id, title, author, contents, genre) {
+    const [result] = await pool.query(
+        'UPDATE books SET title = ?, author = ?, contents = ?, genre = ? WHERE id = ?',
+        [title, author, contents, genre, id]
+    );
+    return result;
+}
 export async function getSpell(id){
     const [rows] = await pool.query('SELECT * FROM spells WHERE id = ?' [id])
     return rows[0]
