@@ -27,7 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # Cache dependencies to speed up future runs
           cache: 'npm'
           cache-dependency-path: Frontend/package-lock.json
 
@@ -53,15 +52,15 @@ jobs:
         id: build
         run: |
           cd Frontend
+          # ensures your build tool knows it is in a subfolder
           npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
 
-      # 4. RUN CHECKS (Lint/Test)
+      # 4. RUN CHECKS
       - name: Run Linter
         id: lint
         if: ${{ !cancelled() }}
         run: |
           cd Frontend
-          # '|| echo' ensures the build continues even if lint fails, so you can see the log in the dashboard
           npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
 
       - name: Run Tests
@@ -93,18 +92,17 @@ jobs:
           done
 
           # --- Create Dashboard Markdown ---
-          # This Markdown file will be converted to HTML in the next step
+          # We use the computed base path so the link is absolute and always correct
+          REPO_URL="${{ steps.compute-base.outputs.base }}"
+          
           printf '## Quick Links\n\n' > $DOCS/dashboard.md
-          echo "* [Deployed Site](../): Your actual website." >> $DOCS/dashboard.md
+          echo "* [Deployed Site]($REPO_URL): Your actual website." >> $DOCS/dashboard.md
           echo "* [Installation Log](../install.html)" >> $DOCS/dashboard.md
           echo "* [Build Log](../build.html)" >> $DOCS/dashboard.md
           echo "* [Linter Log](../lint.html)" >> $DOCS/dashboard.md
           echo "* [Test Log](../test.html)" >> $DOCS/dashboard.md
 
-          # NOTE: We removed the overwrite of index.html here so your actual site remains accessible.
-
-      # 6. DOCS GENERATION (Markdown -> HTML)
-      # This step creates the actual dashboard.html file
+      # 6. DOCS GENERATION
       - name: Generate HTML from Markdown
         if: ${{ !cancelled() }}
         uses: ldeluigi/markdown-docs@latest
@@ -112,17 +110,7 @@ jobs:
           src: Frontend/docs
           dst: Frontend/dist/docs/
 
-      # 7. POST-PROCESSING (NEW STEP)
-      # Now that dashboard.html exists, we can move/copy it safely
-      - name: Finalize Dashboard Links
-        if: ${{ !cancelled() }}
-        run: |
-          # Copy the dashboard to a root file for easy access (e.g., /dashboard.html)
-          if [ -f Frontend/dist/docs/dashboard.html ]; then
-             cp Frontend/dist/docs/dashboard.html Frontend/dist/quick.html
-          fi
-
-      # 8. UPLOAD & DEPLOY
+      # 7. UPLOAD & DEPLOY
       - name: Setup Pages
         if: ${{ !cancelled() }}
         uses: actions/configure-pages@v5
