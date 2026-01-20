@@ -27,7 +27,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # IMPROVEMENT: Cache dependencies to speed up install
+          # Cache dependencies to speed up future runs
           cache: 'npm'
           cache-dependency-path: Frontend/package-lock.json
 
@@ -53,17 +53,15 @@ jobs:
         id: build
         run: |
           cd Frontend
-          # Ensure your build script (Vite/Webpack) actually uses this argument!
           npm run build -- --base "${{ steps.compute-base.outputs.base }}" |& tee ../temp_logs/build.log
 
-      # 4. RUN CHECKS
+      # 4. RUN CHECKS (Lint/Test)
       - name: Run Linter
         id: lint
         if: ${{ !cancelled() }}
-        # NOTE: '|| echo' prevents the build from failing on lint errors. 
-        # Remove '|| echo...' if you want to stop deployment on errors.
         run: |
           cd Frontend
+          # '|| echo' ensures the build continues even if lint fails, so you can see the log in the dashboard
           npm run lint |& tee ../temp_logs/lint.log || echo "Lint script missing or failed" >> ../temp_logs/lint.log
 
       - name: Run Tests
@@ -73,7 +71,7 @@ jobs:
           cd Frontend
           npm test |& tee ../temp_logs/test.log || echo "Test script missing or failed" >> ../temp_logs/test.log
 
-      # 5. PREPARE DASHBOARD ASSETS (Logs & Markdown)
+      # 5. PREPARE DASHBOARD ASSETS
       - name: Generate Log HTML and Dashboard MD
         if: ${{ !cancelled() }}
         run: |
@@ -86,7 +84,6 @@ jobs:
           # --- Create HTML Wrappers for Logs ---
           for log in install build lint test; do
             echo "<html><body><pre>" > $DIST/${log}.html
-            # Check if file exists before catting to avoid errors
             if [ -f temp_logs/${log}.log ]; then 
               cat temp_logs/${log}.log >> $DIST/${log}.html
             else
@@ -96,7 +93,7 @@ jobs:
           done
 
           # --- Create Dashboard Markdown ---
-          # This file will be converted to HTML in the next step
+          # This Markdown file will be converted to HTML in the next step
           printf '## Quick Links\n\n' > $DOCS/dashboard.md
           echo "* [Deployed Site](../): Your actual website." >> $DOCS/dashboard.md
           echo "* [Installation Log](../install.html)" >> $DOCS/dashboard.md
@@ -104,11 +101,10 @@ jobs:
           echo "* [Linter Log](../lint.html)" >> $DOCS/dashboard.md
           echo "* [Test Log](../test.html)" >> $DOCS/dashboard.md
 
-          # --- Create Redirect at Root ---
-          # Pointing to docs/dashboard.html (explicit extension is safer)
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard.html' /></head><body>Redirecting...</body></html>" > $DIST/index.html
+          # NOTE: We removed the overwrite of index.html here so your actual site remains accessible.
 
       # 6. DOCS GENERATION (Markdown -> HTML)
+      # This step creates the actual dashboard.html file
       - name: Generate HTML from Markdown
         if: ${{ !cancelled() }}
         uses: ldeluigi/markdown-docs@latest
@@ -116,12 +112,12 @@ jobs:
           src: Frontend/docs
           dst: Frontend/dist/docs/
 
-      # 7. POST-PROCESSING (Fixes the logic error)
-      - name: Finalize Assets
+      # 7. POST-PROCESSING (NEW STEP)
+      # Now that dashboard.html exists, we can move/copy it safely
+      - name: Finalize Dashboard Links
         if: ${{ !cancelled() }}
         run: |
-          # NOW dashboard.html exists, so we can copy it if needed
-          # Note: markdown-docs usually outputs to the 'dst' folder.
+          # Copy the dashboard to a root file for easy access (e.g., /dashboard.html)
           if [ -f Frontend/dist/docs/dashboard.html ]; then
              cp Frontend/dist/docs/dashboard.html Frontend/dist/quick.html
           fi
