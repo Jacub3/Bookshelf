@@ -71,22 +71,19 @@ export function BookList({book, setBook}: BookListProps) {
         setSelectedGenre('Fantasy');
         
         setIsWriting(true);
-        setViewingBook(null); // Ensure we aren't viewing
+        setViewingBook(null);
     }
 
     // 2. Open Existing Book (View Mode)
-    const openBook = (b: books) => {
-        // Pre-fill form in case they want to edit
+const openBook = (b: books) => {
         setTitleText(b.title);
         setAuthorText(b.author);
         setContentsText(b.contents);
-        setSelectedGenre(b.genre);
+        setSelectedGenre(b.genre || 'Fantasy');
 
-        setIsEditing(false); // Start in "View" mode, not edit
         setViewingBook(b);
         setIsWriting(false);
     }
-
     // 3. Delete Book
     const handleDelete = async () => {
         if (!viewingBook) return;
@@ -117,8 +114,9 @@ export function BookList({book, setBook}: BookListProps) {
 
         try {
             await fetch(`http://localhost:8080/books/${viewingBook.id}`, {
-                method: 'PUT', // or PATCH depending on your backend
-                headers: { 'Content-type': 'application/JSON' },
+                method: 'PUT',
+                // FIX: Use standard capitalization
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedData),
             });
 
@@ -129,7 +127,7 @@ export function BookList({book, setBook}: BookListProps) {
 
             // Update the 'viewing' reference so the UI refreshes
             setViewingBook({ ...viewingBook, ...updatedData });
-            setIsEditing(false); // Exit edit mode
+            setIsEditing(false); 
 
         } catch (error) {
             console.error("Error updating book", error);
@@ -148,11 +146,12 @@ export function BookList({book, setBook}: BookListProps) {
         try {
             const response = await fetch('http://localhost:8080/books', {
                 method: 'POST',
-                headers: { 'Content-type': 'application/JSON' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newBook),
             });
 
             if (!response.ok) throw new Error('Network was not okay');
+
             const resultID = await response.json();
 
             setBook(prev => ([
@@ -211,7 +210,6 @@ export function BookList({book, setBook}: BookListProps) {
                 {book.map((b) => (
                     <button
                         key={b.id}
-                        // CHANGE: Click now opens the Book View instead of starting quiz immediately
                         onClick={() => openBook(b)} 
                         className="pixel-book-button"
                         style={{ position: 'relative' }} 

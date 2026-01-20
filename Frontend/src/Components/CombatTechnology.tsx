@@ -23,7 +23,7 @@ function createGoblin(playerLevel: number): Enemy {
     let dmg = 2 + (playerLevel);
 
     if (type === 'Melee') { hp *= 1.5; dmg *= 0.8; }
-    else if (type === 'Range') { hp *= 0.7; dmg *= 1.5; }
+    else if (type === 'Range') { hp *= 0.7; dmg *= 1.5; }   
     else if (type === 'Healer') { dmg *= 0.5; }
 
     return {
