@@ -17,7 +17,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # This ensures that if a pipe (|) fails, the whole step fails
     defaults:
       run:
         shell: bash
@@ -32,29 +31,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: Frontend/package-lock.json
+          # We temporarily disable caching to clear the "Permission Denied" corruption
+          # cache: 'npm'
+          # cache-dependency-path: Frontend/package-lock.json
 
       # 1. SETUP LOGGING
       - name: Create Temp Log Directory
         run: mkdir -p temp_logs
 
-      # 2. INSTALL
+      # 2. INSTALL (The Fix)
       - name: Install Dependencies
         id: install
         run: |
           set -o pipefail
           cd Frontend
-          npm install | tee ../temp_logs/install.log
+          # 'npm ci' deletes node_modules and reinstalls fresh. 
+          # This fixes the "vite: Permission denied" error.
+          npm ci | tee ../temp_logs/install.log
 
       # 3. BUILD
-      # We removed the manual base argument. We now trust your vite.config.js
       - name: Build the project
         id: build
         run: |
           set -o pipefail
           cd Frontend
-          # If this step fails, the workflow will now correctly STOP and turn Red.
           npm run build | tee ../temp_logs/build.log
 
       # 4. RUN CHECKS
@@ -63,7 +63,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           cd Frontend
-          # We allow this to "pass" with || true so we can see the logs even if lint fails
           npm run lint > ../temp_logs/lint.log 2>&1 || true
 
       - name: Run Tests
@@ -80,7 +79,6 @@ jobs:
           DIST="Frontend/dist"
           DOCS="Frontend/docs"
           
-          # Ensure dist exists (in case build failed but we are forcing a run)
           mkdir -p $DIST
           mkdir -p $DOCS
 
