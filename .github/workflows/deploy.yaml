@@ -113,7 +113,7 @@ jobs:
           echo "* [Test Log](../tests.html)" >> $DOCS/dashboard.md
 
           # Create Redirects
-          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting...</body></html>" > $DIST/dashboard.html
+          echo "<html><head><meta http-equiv='refresh' content='0; URL=docs/dashboard' /></head><body>Redirecting...</body></html>" > $DIST/index.html
           cp $DIST/dashboard.html $DIST/quick.html
 
       # 6. DOCS GENERATION
