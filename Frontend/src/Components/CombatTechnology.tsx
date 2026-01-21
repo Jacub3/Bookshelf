@@ -38,6 +38,7 @@ function createGoblin(playerLevel: number): Enemy {
 
 const getSpriteStyle = (type: 'Melee' | 'Range' | 'Healer') => {
     const spriteSize = 350; 
+    const scale = .5;
     let row = 0;
 
     switch (type) {
@@ -52,7 +53,12 @@ const getSpriteStyle = (type: 'Melee' | 'Range' | 'Healer') => {
         width: `${spriteSize}px`,
         height: `${spriteSize}px`,
         backgroundPosition: `0px -${row * spriteSize}px`, 
-        imageRendering: 'pixelated' as const 
+        imageRendering: 'pixelated' as const,
+
+        transform: `scale(${scale})`, 
+        transformOrigin: 'top left',
+        marginBottom: `-${spriteSize * (1 - scale)}px`, // Optional: fixes the empty space left by scaling down
+        marginRight: `-${spriteSize * (1 - scale)}px`
     };
 };
 
@@ -173,7 +179,7 @@ export function Combat({ initialEnemyData, onVictory }: CombatProps) {
                 </div>
             </div>
 
-            <div style={{ marginTop: '20px', background: '#333', color: '#fff', padding: '10px', height: '150px', overflowY: 'auto' }}>
+            <div style={{ marginTop: '20px', background: '#fbf9f9', color: '#040404', padding: '10px', height: '150px', overflowY: 'auto' }}>
                 {combatLog.map((entry, i) => <div key={i}>{entry}</div>)}
             </div>
         </div>
