@@ -19,6 +19,23 @@ interface BookListProps {
     setBook: Dispatch<SetStateAction<books[]>>
 }
 
+// --- 1. CONFIGURATION FOR THE "CREATE BOOK" BUTTON ---
+// Adjust these X/Y values to place the "Create" button exactly where you want it.
+const CREATE_POS = {
+    x: 102,
+    y: 41
+};
+
+// --- 2. CONFIGURATION FOR THE BOOK ROWS ---
+// This grid is now independent. START_X/Y determines where the *first saved book* appears.
+const SHELF_GRID = {
+    ITEMS_PER_ROW: 10,       
+    ROW_HEIGHT: 60,         
+    BOOK_WIDTH: 13,         
+    START_X: 88,            // Start slightly to the right of the Create button
+    START_Y: 89             // Usually aligned with the Create button, or different if you prefer
+};
+
 const GENRE_COLORS: Record<string, string> = {
     "Fantasy": "hue-rotate(55deg) brightness(1.3) saturate(1.2)",          
     "Science Fiction": "hue-rotate(290deg)", 
@@ -37,22 +54,17 @@ const GENRE_COLORS: Record<string, string> = {
 };
 
 export function BookList({book, setBook}: BookListProps) {
-    // Mode States
-    const [isWriting, setIsWriting] = useState<boolean>(false); // Creating a new book
-    const [viewingBook, setViewingBook] = useState<books | null>(null); // Viewing an existing book
-    const [isEditing, setIsEditing] = useState<boolean>(false); // Editing inside View mode
+    const [isWriting, setIsWriting] = useState<boolean>(false);
+    const [viewingBook, setViewingBook] = useState<books | null>(null);
+    const [isEditing, setIsEditing] = useState<boolean>(false);
 
-    // Shared Form States (Used for both Creating and Editing)
     const [titleText, setTitleText] = useState<string>('');
     const [contentsText, setContentsText] = useState<number | ''>('');
     const [authorText, setAuthorText] = useState<string>('');
     const [selectedGenre, setSelectedGenre] = useState<string>('Fantasy');
 
-    // Quiz States
     const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
     const [activeQuiz, setActiveQuiz] = useState<QuizData | null>(null);
-
-    // -- HANDLERS --
 
     const handleTitle = (e: ChangeEvent<HTMLTextAreaElement>) => setTitleText(e.target.value);
     const handleAuthor = (e: ChangeEvent<HTMLTextAreaElement>) => setAuthorText(e.target.value);
@@ -62,108 +74,50 @@ export function BookList({book, setBook}: BookListProps) {
         setContentsText(val === '' ? '': Number(val));
     }
 
-    // 1. Start Creating New Book
     const startWriting = () => {
-        // Clear form
-        setTitleText('');
-        setAuthorText('');
-        setContentsText('');
-        setSelectedGenre('Fantasy');
-        
-        setIsWriting(true);
-        setViewingBook(null);
+        setTitleText(''); setAuthorText(''); setContentsText(''); setSelectedGenre('Fantasy');
+        setIsWriting(true); setViewingBook(null);
     }
 
-    // 2. Open Existing Book (View Mode)
-const openBook = (b: books) => {
-        setTitleText(b.title);
-        setAuthorText(b.author);
-        setContentsText(b.contents);
-        setSelectedGenre(b.genre || 'Fantasy');
-
-        setViewingBook(b);
-        setIsWriting(false);
+    const openBook = (b: books) => {
+        setTitleText(b.title); setAuthorText(b.author); setContentsText(b.contents); setSelectedGenre(b.genre || 'Fantasy');
+        setViewingBook(b); setIsWriting(false);
     }
-    // 3. Delete Book
+
     const handleDelete = async () => {
         if (!viewingBook) return;
         if (!confirm("Are you sure you want to burn this book?")) return;
-
         try {
-            await fetch(`http://localhost:8080/books/${viewingBook.id}`, {
-                method: 'DELETE',
-            });
+            await fetch(`http://localhost:8080/books/${viewingBook.id}`, { method: 'DELETE' });
             setBook(prev => prev.filter(b => b.id !== viewingBook.id));
-            setViewingBook(null); // Close modal
-        } catch (error) {
-            console.error("Error deleting book", error);
-            alert("Failed to delete book.");
-        }
+            setViewingBook(null);
+        } catch (error) { console.error("Error deleting book", error); alert("Failed to delete book."); }
     };
 
-    // 4. Update Book (Save Edit)
     const handleUpdate = async () => {
         if (!viewingBook) return;
-
-        const updatedData = {
-            title: titleText,
-            author: authorText,
-            contents: Number(contentsText),
-            genre: selectedGenre
-        };
-
+        const updatedData = { title: titleText, author: authorText, contents: Number(contentsText), genre: selectedGenre };
         try {
             await fetch(`http://localhost:8080/books/${viewingBook.id}`, {
-                method: 'PUT',
-                // FIX: Use standard capitalization
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedData),
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedData),
             });
-
-            // Update local state
-            setBook(prev => prev.map(b => 
-                b.id === viewingBook.id ? { ...b, ...updatedData } : b
-            ));
-
-            // Update the 'viewing' reference so the UI refreshes
+            setBook(prev => prev.map(b => b.id === viewingBook.id ? { ...b, ...updatedData } : b));
             setViewingBook({ ...viewingBook, ...updatedData });
             setIsEditing(false); 
-
-        } catch (error) {
-            console.error("Error updating book", error);
-            alert("Failed to update book.");
-        }
+        } catch (error) { console.error("Error updating book", error); alert("Failed to update book."); }
     };
 
-    // 5. Create New Book (Save New)
     const handleSaveNew = async () => {
-        const newBook = {
-            title: titleText,
-            contents: Number(contentsText),
-            author: authorText,
-            genre: selectedGenre
-        }
+        const newBook = { title: titleText, contents: Number(contentsText), author: authorText, genre: selectedGenre }
         try {
             const response = await fetch('http://localhost:8080/books', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newBook),
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newBook),
             });
-
             if (!response.ok) throw new Error('Network was not okay');
-
             const resultID = await response.json();
-
-            setBook(prev => ([
-                ...prev,
-                { id: resultID, ...newBook, created: true }
-            ]));
-            
+            setBook(prev => ([ ...prev, { id: resultID, ...newBook, created: true } ]));
             setIsWriting(false);
-        } catch(error){
-            console.error("Error saving book", error);
-            alert('Failed to save book');
-        }
+        } catch(error){ console.error("Error saving book", error); alert('Failed to save book'); }
     }
 
     const startQuiz = async () => {
@@ -171,33 +125,43 @@ const openBook = (b: books) => {
         setIsLoadingQuiz(true);
         try {
             const data = await generateBookQuiz(viewingBook.title, viewingBook.author, viewingBook.contents);
-            if (data) {
-                setActiveQuiz(data);
-                setViewingBook(null); // Optional: Close the book view when quiz starts
-            } else {
-                throw new Error("No data returned");
-            }
-        } catch (error) {
-            console.error("Quiz Error:", error);
-            alert("Could not summon this book's spirit.");
-        } finally {
-            setIsLoadingQuiz(false);
-        }
+            if (data) { setActiveQuiz(data); setViewingBook(null); }
+        } catch (error) { console.error("Quiz Error:", error); alert("Could not summon this book's spirit."); } 
+        finally { setIsLoadingQuiz(false); }
     };
 
-    if (activeQuiz) {
-        return <QuizBook quiz={activeQuiz} onClose={() => setActiveQuiz(null)} />;
-    }
+    // --- HELPER: Only calculates position for the BOOKS now ---
+    const getBookStyle = (index: number) => {
+        const row = Math.floor(index / SHELF_GRID.ITEMS_PER_ROW);
+        const col = index % SHELF_GRID.ITEMS_PER_ROW;
+
+        return {
+            position: 'absolute' as const,
+            left: `${SHELF_GRID.START_X + (col * SHELF_GRID.BOOK_WIDTH)}px`,
+            top: `${SHELF_GRID.START_Y + (row * SHELF_GRID.ROW_HEIGHT)}px`,
+            transition: 'all 0.3s ease',
+            zIndex: 10 + row
+        };
+    };
+
+    if (activeQuiz) { return <QuizBook quiz={activeQuiz} onClose={() => setActiveQuiz(null)} />; }
 
     return(
         <div>
-            {/* SHELF DISPLAY */}
             <div className="book-container">
+                
+                {/* 1. CREATE BUTTON - INDEPENDENT POSITIONING */}
                 <button
                     id="create-book-btn"
                     onClick={startWriting}
                     className="pixel-book-button"
                     title="Write a new book"
+                    style={{
+                        position: 'absolute',
+                        left: `${CREATE_POS.x}px`,
+                        top: `${CREATE_POS.y}px`,
+                        transform: 'rotate(-39deg) translateY(-2px)'
+                    }}
                 >
                     <img 
                         src={blueBook} 
@@ -207,12 +171,13 @@ const openBook = (b: books) => {
                     />
                 </button>
 
-                {book.map((b) => (
+                {/* 2. SAVED BOOKS - GRID POSITIONING */}
+                {book.map((b, index) => (
                     <button
                         key={b.id}
                         onClick={() => openBook(b)} 
                         className="pixel-book-button"
-                        style={{ position: 'relative' }} 
+                        style={getBookStyle(index)} // Starts at index 0 of the GRID
                         title={`${b.title} (${b.genre})`}
                     >
                         <img 
@@ -225,36 +190,26 @@ const openBook = (b: books) => {
                 ))}
             </div>
             
-            {isLoadingQuiz && (
-                <div className="loading-text" style={{
-                    position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
-                    color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000', zIndex: 3000
-                }}>
-                    Summoning Knowledge...
-                </div>
-            )}
+            {/* OVERLAYS REMAIN UNCHANGED */}
+            {isLoadingQuiz && ( <div className="loading-text" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000', zIndex: 3000 }}>Summoning Knowledge...</div> )}
 
-            {/* --- 1. WRITING OVERLAY (For New Books) --- */}
             {isWriting && (
                 <div className="writing-overlay">
                     <div className="open-book">
                         <div className="book-page page-left">
                             <textarea className="handwritten-input title-input" placeholder="Title..." value={titleText} onChange={handleTitle} maxLength={30} />
                             <textarea className="handwritten-input author-input" placeholder="Author..." value={authorText} onChange={handleAuthor} maxLength={30} />
-                            
                             <div style={{ marginTop: '1rem' }}>
                                 <label style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: '#5d4037' }}>Book Aura:</label>
                                 <select value={selectedGenre} onChange={handleGenre} style={{ display: 'block', width: '100%', padding: '5px', marginTop: '5px', background: 'rgba(255,255,255,0.5)', border: '1px solid #d0c0a0', borderRadius: '4px', fontFamily: 'monospace' }}>
                                     {Object.keys(GENRE_COLORS).map(g => <option key={g} value={g}>{g}</option>)}
                                 </select>
                             </div>
-
                             <div className="book-actions">
                                 <button className="ink-btn" onClick={() => setIsWriting(false)}>Discard</button>
                                 <button className="ink-btn" onClick={handleSaveNew}>Sign & Save</button>
                             </div>
                         </div>
-
                         <div className="book-page page-right">
                             <input type="number" className="handwritten-input contents-input" placeholder="Chapters..." value={contentsText} onChange={handleContents} style={{ width: '80%', fontSize: '1.5rem', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'inherit' }} />
                         </div>
@@ -262,15 +217,11 @@ const openBook = (b: books) => {
                 </div>
             )}
 
-            {/* --- 2. VIEW/EDIT OVERLAY (For Existing Books) --- */}
             {viewingBook && (
                 <div className="writing-overlay">
                     <div className="open-book">
-                        
-                        {/* LEFT PAGE: Metadata + Edit/Delete */}
                         <div className="book-page page-left">
                             {isEditing ? (
-                                // EDIT MODE
                                 <>
                                     <textarea className="handwritten-input title-input" value={titleText} onChange={handleTitle} maxLength={30} />
                                     <textarea className="handwritten-input author-input" value={authorText} onChange={handleAuthor} maxLength={30} />
@@ -285,18 +236,10 @@ const openBook = (b: books) => {
                                     </div>
                                 </>
                             ) : (
-                                // VIEW MODE
                                 <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
-                                    <h2 style={{ fontFamily: 'PlayfairDisplay', fontSize: '1.8rem', margin: '0 0 10px 0', borderBottom: '2px solid rgba(0,0,0,0.1)' }}>
-                                        {viewingBook.title}
-                                    </h2>
-                                    <p style={{ fontFamily: 'Courier New', fontStyle: 'italic', fontSize: '1.1rem', margin: '0' }}>
-                                        by {viewingBook.author}
-                                    </p>
-                                    <p style={{ fontFamily: 'Courier New', fontSize: '0.9rem', color: '#5d4037', marginTop: '10px' }}>
-                                        Aura: {viewingBook.genre}
-                                    </p>
-
+                                    <h2 style={{ fontFamily: 'PlayfairDisplay', fontSize: '1.8rem', margin: '0 0 10px 0', borderBottom: '2px solid rgba(0,0,0,0.1)' }}>{viewingBook.title}</h2>
+                                    <p style={{ fontFamily: 'Courier New', fontStyle: 'italic', fontSize: '1.1rem', margin: '0' }}>by {viewingBook.author}</p>
+                                    <p style={{ fontFamily: 'Courier New', fontSize: '0.9rem', color: '#5d4037', marginTop: '10px' }}>Aura: {viewingBook.genre}</p>
                                     <div style={{ marginTop: 'auto', display: 'flex', gap: '10px', justifyContent: 'center' }}>
                                         <button className="ink-btn" onClick={() => setIsEditing(true)}>Edit</button>
                                         <button className="ink-btn" onClick={handleDelete} style={{ background: '#5a2d2d', color: '#ffdddd' }}>Delete</button>
@@ -304,31 +247,14 @@ const openBook = (b: books) => {
                                 </div>
                             )}
                         </div>
-
-                        {/* RIGHT PAGE: Quiz Button */}
                         <div className="book-page page-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            <button 
-                                className="close-btn" 
-                                style={{ top: '10px', right: '10px', background: 'transparent', color: '#3e2723', fontSize: '1.2rem', fontWeight: 'bold' }}
-                                onClick={() => setViewingBook(null)}
-                            >
-                                X
-                            </button>
-
+                            <button className="close-btn" style={{ top: '10px', right: '10px', background: 'transparent', color: '#3e2723', fontSize: '1.2rem', fontWeight: 'bold' }} onClick={() => setViewingBook(null)}>X</button>
                             {isEditing ? (
                                 <input type="number" className="handwritten-input contents-input" placeholder="# Chapters" value={contentsText} onChange={handleContents} style={{ fontSize: '1.5rem', textAlign: 'center' }} />
                             ) : (
                                 <>
-                                    <h3 style={{ fontFamily: 'Courier New', marginBottom: '20px' }}>
-                                        Chapter Count: {viewingBook.contents}
-                                    </h3>
-                                    <button 
-                                        className="ink-btn" 
-                                        onClick={startQuiz}
-                                        style={{ fontSize: '1.2rem', padding: '15px 30px', border: '2px double #5d4037' }}
-                                    >
-                                        Take Quiz
-                                    </button>
+                                    <h3 style={{ fontFamily: 'Courier New', marginBottom: '20px' }}>Chapter Count: {viewingBook.contents}</h3>
+                                    <button className="ink-btn" onClick={startQuiz} style={{ fontSize: '1.2rem', padding: '15px 30px', border: '2px double #5d4037' }}>Take Quiz</button>
                                 </>
                             )}
                         </div>
