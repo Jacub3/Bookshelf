@@ -355,8 +355,8 @@ function App() {
           position: 'absolute',
           left: enemy.x,
           top: enemy.y,
-          width: '50px',
-          height: '50px',
+          width: '110px',
+          height: '110px',
           backgroundImage: `url(${goblinSprite})`,
           backgroundPosition: '0px 0px', 
           backgroundSize: '350px',
@@ -445,7 +445,7 @@ function App() {
 
       {showCombat && (
         <div className="ui-overlay" style={{background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1000}}>
-          <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '600px', maxHeight: '90vh', overflow: 'auto'}}>
+          <div style={{background: 'white', padding: '20px', borderRadius: '8px', width: '800px', maxHeight: '90vh', overflow: 'auto'}}>
              <button onClick={() => setShowCombat(false)} style={{float: 'right'}}>Run Away (Esc)</button>
              <Combat 
                 initialEnemyData={overworldEnemies.find(e => e.id === activeCombatEnemyId)?.combatData || { level: 1 }}
