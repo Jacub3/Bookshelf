@@ -126,7 +126,18 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+    const target = e.target as HTMLElement;
+      const isTyping = 
+          target.tagName === 'INPUT' || 
+          target.tagName === 'TEXTAREA' || 
+          target.tagName === 'SELECT';
+
+      if (isTyping) {
+          return; 
+      }
+
       const gameKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd']);
+      
       if (gameKeys.has(e.key) || gameKeys.has(e.key.toLowerCase())) {
         e.preventDefault();
       }
