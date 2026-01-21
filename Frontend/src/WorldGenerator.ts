@@ -11,6 +11,8 @@ const TILES = {
   GRASS_1: 2,
   GRASS_2: 3,
   GRASS_3: 4,
+  TREE: 5,
+  MOUNTAIN: 6
 };
 
 export type WorldMap = Record<string, number[][]>;
@@ -45,6 +47,9 @@ const generateChunkData = (chunkX: number, chunkY: number): number[][] => {
       let tile = TILES.GRASS_3; 
       if (rand > 0.8) tile = TILES.GRASS_1;
       else if (rand > 0.6) tile = TILES.GRASS_2;
+      else if(rand > 0.5) tile = TILES.TREE;
+      else if(rand > 0.45) tile = TILES.MOUNTAIN;
+      else if(rand > 0.3) tile = TILES.GRASS_3; 
       rowData.push(tile);
     }
     grid.push(rowData);
@@ -53,7 +58,7 @@ const generateChunkData = (chunkX: number, chunkY: number): number[][] => {
 };
 
 /**
- * NEW: Generates enemies for a specific chunk
+ * Generates enemies for a specific chunk
  */
 export const generateEnemiesForChunk = (chunkX: number, chunkY: number): OverworldEnemy[] => {
     // Constraint 1: They cannot spawn in the library (0,0)

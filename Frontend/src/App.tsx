@@ -17,6 +17,7 @@ import Spellbook from './Components/SpellBook'
 
 import './App.css'
 
+// ====WALLS==== //
 import horizontalWall from './assets/Wall/horizontalWall.png';
 import horizontalbottomWall from './assets/Wall/bottomWallHorizontal.png'
 import cornerBottomLeft from './assets/Wall/CornerLBottomLeft.png'
@@ -33,6 +34,9 @@ import virticalWallLeft from './assets/Wall/virticalWallLeft.png'
 import virticalWallRight from './assets/Wall/virticalWallRight.png'
 import topL from './assets/Wall/TopL.png'
 import topR from './assets/Wall/TopR.png'
+
+import tree from './assets/appleTree.png'
+import mountain from './assets/Mountain.png'
 
 import TheBookshelf from './assets/TheBookshelf.png'
 import BookshelfTile from './assets/BookshelfTile.png'
@@ -60,7 +64,7 @@ const CHUNK_WIDTH_PX = CHUNK_COLS * TILE_SIZE;
 const CHUNK_HEIGHT_PX = CHUNK_ROWS * TILE_SIZE; 
 
 const TILE_IMAGES: Record<number, string> = {
-  1: horizontalWall, 2: GrassFlowers, 3: GrassBFlowers, 4: grass, 19: BookshelfTile,
+  1: horizontalWall, 2: GrassFlowers, 3: GrassBFlowers, 4: grass, 5: tree, 6: mountain, 19: BookshelfTile,
   20: rugCenter, 21: rugTL, 22: rugT, 23: rugTR, 24: rugL, 25: rugR, 26: rugBL, 27: rugB,
   28: rugBR, 40: horizontalbottomWall, 41: cornerBottomLeft, 42: cornerBottomRight,
   43: cornerTopLeft, 44: cornerTopRight, 45: horiTopBottom, 46: horiTopTop, 47: rightTopL,
