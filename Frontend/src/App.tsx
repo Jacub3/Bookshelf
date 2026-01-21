@@ -127,13 +127,8 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
     const target = e.target as HTMLElement;
-      const isTyping = 
-          target.tagName === 'INPUT' || 
-          target.tagName === 'TEXTAREA' || 
-          target.tagName === 'SELECT';
-
-      if (isTyping) {
-          return; 
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return; 
       }
 
       const gameKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd']);
