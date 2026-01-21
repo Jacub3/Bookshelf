@@ -19,21 +19,21 @@ interface BookListProps {
     setBook: Dispatch<SetStateAction<books[]>>
 }
 
-// --- 1. CONFIGURATION FOR THE "CREATE BOOK" BUTTON ---
-// Adjust these X/Y values to place the "Create" button exactly where you want it.
 const CREATE_POS = {
     x: 102,
     y: 41
 };
 
-// --- 2. CONFIGURATION FOR THE BOOK ROWS ---
-// This grid is now independent. START_X/Y determines where the *first saved book* appears.
 const SHELF_GRID = {
-    ITEMS_PER_ROW: 10,       
-    ROW_HEIGHT: 60,         
-    BOOK_WIDTH: 13,         
-    START_X: 88,            // Start slightly to the right of the Create button
-    START_Y: 89             // Usually aligned with the Create button, or different if you prefer
+    ITEMS_PER_ROW: 14,       
+    ROW_HEIGHT: 59,         
+    BOOK_WIDTH: 12,         
+    START_X: 88,            
+    START_Y: 89             
+};
+
+const SHELF_LIMITS = {
+    ROWS_PER_SHELF: 3
 };
 
 const GENRE_COLORS: Record<string, string> = {
@@ -58,6 +58,8 @@ export function BookList({book, setBook}: BookListProps) {
     const [viewingBook, setViewingBook] = useState<books | null>(null);
     const [isEditing, setIsEditing] = useState<boolean>(false);
 
+    const [currentPage, setCurrentPage] = useState<number>(0);
+
     const [titleText, setTitleText] = useState<string>('');
     const [contentsText, setContentsText] = useState<number | ''>('');
     const [authorText, setAuthorText] = useState<string>('');
@@ -66,6 +68,25 @@ export function BookList({book, setBook}: BookListProps) {
     const [isLoadingQuiz, setIsLoadingQuiz] = useState(false);
     const [activeQuiz, setActiveQuiz] = useState<QuizData | null>(null);
 
+    // --- PAGINATION HELPERS ---
+    const BOOKS_PER_SHELF = SHELF_GRID.ITEMS_PER_ROW * SHELF_LIMITS.ROWS_PER_SHELF;
+    const totalPages = Math.max(1, Math.ceil(book.length / BOOKS_PER_SHELF));
+    
+    // Get only the books for the current page
+    const currentBooks = book.slice(
+        currentPage * BOOKS_PER_SHELF, 
+        (currentPage + 1) * BOOKS_PER_SHELF
+    );
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages - 1) setCurrentPage(p => p + 1);
+    };
+
+    const handlePrevPage = () => {
+        if (currentPage > 0) setCurrentPage(p => p - 1);
+    };
+
+    // -- HANDLERS --
     const handleTitle = (e: ChangeEvent<HTMLTextAreaElement>) => setTitleText(e.target.value);
     const handleAuthor = (e: ChangeEvent<HTMLTextAreaElement>) => setAuthorText(e.target.value);
     const handleGenre = (e: ChangeEvent<HTMLSelectElement>) => setSelectedGenre(e.target.value);
@@ -91,6 +112,11 @@ export function BookList({book, setBook}: BookListProps) {
             await fetch(`http://localhost:8080/books/${viewingBook.id}`, { method: 'DELETE' });
             setBook(prev => prev.filter(b => b.id !== viewingBook.id));
             setViewingBook(null);
+            
+            // If we deleted the last book on a page, go back one page
+            if (currentBooks.length === 1 && currentPage > 0) {
+                setCurrentPage(p => p - 1);
+            }
         } catch (error) { console.error("Error deleting book", error); alert("Failed to delete book."); }
     };
 
@@ -115,8 +141,18 @@ export function BookList({book, setBook}: BookListProps) {
             });
             if (!response.ok) throw new Error('Network was not okay');
             const resultID = await response.json();
+            
+            // Add book
             setBook(prev => ([ ...prev, { id: resultID, ...newBook, created: true } ]));
             setIsWriting(false);
+
+            // Auto-switch to the new page if we are full
+            const newTotalBooks = book.length + 1;
+            const newPage = Math.ceil(newTotalBooks / BOOKS_PER_SHELF) - 1;
+            if (newPage > currentPage) {
+                setCurrentPage(newPage);
+            }
+
         } catch(error){ console.error("Error saving book", error); alert('Failed to save book'); }
     }
 
@@ -131,6 +167,7 @@ export function BookList({book, setBook}: BookListProps) {
     };
 
     // --- HELPER: Only calculates position for the BOOKS now ---
+    // Note: We use the index relative to the CURRENT PAGE (0-17), not the total index
     const getBookStyle = (index: number) => {
         const row = Math.floor(index / SHELF_GRID.ITEMS_PER_ROW);
         const col = index % SHELF_GRID.ITEMS_PER_ROW;
@@ -150,7 +187,7 @@ export function BookList({book, setBook}: BookListProps) {
         <div>
             <div className="book-container">
                 
-                {/* 1. CREATE BUTTON - INDEPENDENT POSITIONING */}
+                {/* 1. CREATE BUTTON - Constant on all pages */}
                 <button
                     id="create-book-btn"
                     onClick={startWriting}
@@ -160,7 +197,8 @@ export function BookList({book, setBook}: BookListProps) {
                         position: 'absolute',
                         left: `${CREATE_POS.x}px`,
                         top: `${CREATE_POS.y}px`,
-                        transform: 'rotate(-39deg) translateY(-2px)'
+                        zIndex: 15,
+                        transform: 'rotate(-38deg) translateY(-2px)'
                     }}
                 >
                     <img 
@@ -171,13 +209,13 @@ export function BookList({book, setBook}: BookListProps) {
                     />
                 </button>
 
-                {/* 2. SAVED BOOKS - GRID POSITIONING */}
-                {book.map((b, index) => (
+                {/* 2. SAVED BOOKS - Renders only current page slice */}
+                {currentBooks.map((b, index) => (
                     <button
                         key={b.id}
                         onClick={() => openBook(b)} 
                         className="pixel-book-button"
-                        style={getBookStyle(index)} // Starts at index 0 of the GRID
+                        style={getBookStyle(index)} 
                         title={`${b.title} (${b.genre})`}
                     >
                         <img 
@@ -188,9 +226,40 @@ export function BookList({book, setBook}: BookListProps) {
                         />
                     </button>
                 ))}
+                {totalPages > 1 && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '-40px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        gap: '20px',
+                        zIndex: 100
+                    }}>
+                        <button 
+                            className="ink-btn"
+                            onClick={handlePrevPage}
+                            disabled={currentPage === 0}
+                            style={{ opacity: currentPage === 0 ? 0.5 : 1, cursor: currentPage === 0 ? 'default' : 'pointer' }}
+                        >
+                            &lt; Prev Shelf
+                        </button>
+                        <span style={{ fontFamily: 'Courier New', fontWeight: 'bold', color: '#fff', alignSelf: 'center', textShadow: '1px 1px 0 #000' }}>
+                            {currentPage + 1} / {totalPages}
+                        </span>
+                        <button 
+                            className="ink-btn"
+                            onClick={handleNextPage}
+                            disabled={currentPage === totalPages - 1}
+                            style={{ opacity: currentPage === totalPages - 1 ? 0.5 : 1, cursor: currentPage === totalPages - 1 ? 'default' : 'pointer' }}
+                        >
+                            Next Shelf &gt;
+                        </button>
+                    </div>
+                )}
             </div>
             
-            {/* OVERLAYS REMAIN UNCHANGED */}
+            {/* OVERLAYS */}
             {isLoadingQuiz && ( <div className="loading-text" style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white', fontSize: '1.5rem', textShadow: '2px 2px 0 #000', zIndex: 3000 }}>Summoning Knowledge...</div> )}
 
             {isWriting && (
